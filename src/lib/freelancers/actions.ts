@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { parseFreelancerCsvRow } from "./csv-import";
 
 export type ImportFreelancersCsvResult =
@@ -20,13 +21,15 @@ export type ImportFreelancersCsvResult =
  * platform_freelancer_idをキーにupsertし、行ごとの成功/失敗を集計して
  * csv_importsに履歴として残す。
  *
- * TODO(auth): 認証未実装のため、imported_by(NOT NULL)に設定できる実ユーザーIDが
- * 存在しない間はこの機能を実行できない。
+ * このページはadmin限定(SCREEN_SPEC.md 9章)のため、サーバー側でも確認する。
  */
 export async function importFreelancersCsv(
   fileName: string,
   rows: Record<string, string | undefined>[]
 ): Promise<ImportFreelancersCsvResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const currentUserId = await getCurrentUserId();
   if (!currentUserId) {
     return { success: false, error: "ログイン機能が未実装のため、CSVインポートは利用できません。" };

@@ -3,25 +3,34 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/navigation";
+import { signOut } from "@/lib/auth/actions";
+import type { CurrentUser } from "@/lib/auth/current-user";
+import type { PagePermission } from "@/lib/supabase/database.types";
 import { Logo } from "./logo";
 
-// TODO(auth): ログイン実装後、実際のセッションユーザーに置き換える
-const MOCK_CURRENT_USER = {
-  name: "山田 太郎",
-  departmentName: "営業部",
-  isAdmin: true,
-};
-
-// TODO(permissions): user_page_permissions / department_page_permissions
-// の実データが揃うまでの仮実装。hidden権限のページを除外するロジックを
-// ここに追加する。
-function useVisibleNavItems() {
-  return NAV_ITEMS.filter((item) => !item.adminOnly || MOCK_CURRENT_USER.isAdmin);
+/**
+ * SCREEN_SPEC.md 共通レイアウト:
+ * - hidden権限のページはサイドナビに表示しない(department_page_permissions側の
+ *   テンプレートは既にuser_page_permissionsへ一括適用済みという前提なので、
+ *   ここではuser_page_permissionsのみ見ればよい)
+ * - settings/freelancersはadminロール限定(権限設定に関わらず)
+ */
+function useVisibleNavItems(isAdmin: boolean, pagePermissions: Record<string, PagePermission>) {
+  return NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    return pagePermissions[item.pageKey] !== "hidden";
+  });
 }
 
-export function SideNav() {
+export function SideNav({
+  currentUser,
+  pagePermissions,
+}: {
+  currentUser: CurrentUser | null;
+  pagePermissions: Record<string, PagePermission>;
+}) {
   const pathname = usePathname();
-  const items = useVisibleNavItems();
+  const items = useVisibleNavItems(currentUser?.role === "admin", pagePermissions);
 
   return (
     <nav className="flex h-full w-[220px] shrink-0 flex-col border-r border-neutral-200 bg-neutral-0">
@@ -56,19 +65,31 @@ export function SideNav() {
         })}
       </ul>
 
-      <button
-        type="button"
-        className="flex items-center gap-3 border-t border-neutral-100 p-4 text-left hover:bg-page-bg"
-        // TODO(auth): アカウントメニュー(ログアウト等)を実装する
-      >
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">
-          {MOCK_CURRENT_USER.name.slice(0, 1)}
-        </span>
-        <span className="flex flex-col">
-          <span className="text-sm text-neutral-900">{MOCK_CURRENT_USER.name}</span>
-          <span className="text-xs text-neutral-600">{MOCK_CURRENT_USER.departmentName}</span>
-        </span>
-      </button>
+      {currentUser ? (
+        <div className="flex items-center gap-3 border-t border-neutral-100 p-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">
+            {currentUser.name.slice(0, 1)}
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm text-neutral-900">{currentUser.name}</span>
+            <span className="truncate text-xs text-neutral-600">
+              {currentUser.departmentName ?? "部署未設定"}
+            </span>
+          </span>
+          <form action={signOut}>
+            <button type="submit" className="text-xs text-neutral-600 hover:text-primary-600">
+              ログアウト
+            </button>
+          </form>
+        </div>
+      ) : (
+        <Link
+          href="/login"
+          className="border-t border-neutral-100 p-4 text-center text-sm text-primary-600 hover:bg-page-bg"
+        >
+          ログインしてください
+        </Link>
+      )}
     </nav>
   );
 }

@@ -2,13 +2,21 @@ import { notFound } from "next/navigation";
 import { getMeetingNoteById } from "@/lib/meeting-notes/get-meeting-note";
 import { formatDateJa } from "@/lib/format";
 import { ActionItemsChecklist } from "@/components/meeting-notes/action-items-checklist";
+import { requirePageAccess } from "@/lib/auth/page-access";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
 
 export default async function MeetingNoteDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!isSupabaseConfigured()) {
+    return <SupabaseNotConfiguredNotice />;
+  }
+
   const { id } = await params;
+  const { canEdit } = await requirePageAccess("meeting_notes");
   const note = await getMeetingNoteById(id);
   if (!note) {
     notFound();
@@ -43,7 +51,12 @@ export default async function MeetingNoteDetailPage({
       <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
         <h3 className="text-md text-neutral-900">アクションアイテム</h3>
         <div className="mt-3">
-          <ActionItemsChecklist meetingNoteId={note.id} title={note.title} initialItems={note.actionItems} />
+          <ActionItemsChecklist
+            meetingNoteId={note.id}
+            title={note.title}
+            initialItems={note.actionItems}
+            canEdit={canEdit}
+          />
         </div>
       </div>
     </div>

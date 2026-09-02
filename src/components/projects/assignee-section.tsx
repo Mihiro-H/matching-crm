@@ -10,9 +10,11 @@ import type { ProjectAssignee } from "@/lib/projects/get-project-assignees";
 export function AssigneeSection({
   projectId,
   initialAssignees,
+  canEdit,
 }: {
   projectId: string;
   initialAssignees: ProjectAssignee[];
+  canEdit: boolean;
 }) {
   const [assignees, setAssignees] = useState(initialAssignees);
   const [modal, setModal] = useState<"primary" | "secondary" | null>(null);
@@ -80,17 +82,22 @@ export function AssigneeSection({
           <p className="text-xs text-neutral-600">主担当</p>
           <div className="mt-1 flex items-center gap-2">
             {primary ? (
-              <AssigneeChip name={primary.name} onRemove={() => handleRemove(primary.id)} />
+              <AssigneeChip
+                name={primary.name}
+                onRemove={canEdit ? () => handleRemove(primary.id) : undefined}
+              />
             ) : (
               <span className="text-sm text-neutral-600">未アサイン</span>
             )}
-            <button
-              type="button"
-              onClick={() => setModal("primary")}
-              className="text-xs text-primary-600 hover:underline"
-            >
-              主担当を変更
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setModal("primary")}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                主担当を変更
+              </button>
+            )}
           </div>
         </div>
 
@@ -98,15 +105,21 @@ export function AssigneeSection({
           <p className="text-xs text-neutral-600">サブ担当</p>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             {secondaries.map((a) => (
-              <AssigneeChip key={a.id} name={a.name} onRemove={() => handleRemove(a.id)} />
+              <AssigneeChip
+                key={a.id}
+                name={a.name}
+                onRemove={canEdit ? () => handleRemove(a.id) : undefined}
+              />
             ))}
-            <button
-              type="button"
-              onClick={() => setModal("secondary")}
-              className="text-xs text-primary-600 hover:underline"
-            >
-              サブ担当を追加
-            </button>
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => setModal("secondary")}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                サブ担当を追加
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -134,18 +147,24 @@ export function AssigneeSection({
   );
 }
 
-function AssigneeChip({ name, onRemove }: { name: string; onRemove: () => void }) {
+function AssigneeChip({ name, onRemove }: { name: string; onRemove?: () => void }) {
   return (
-    <span className="flex items-center gap-1 rounded-full bg-primary-50 py-1 pl-3 pr-1 text-sm text-primary-600">
+    <span
+      className={`flex items-center gap-1 rounded-full bg-primary-50 py-1 text-sm text-primary-600 ${
+        onRemove ? "pl-3 pr-1" : "px-3"
+      }`}
+    >
       {name}
-      <button
-        type="button"
-        aria-label={`${name}を削除`}
-        onClick={onRemove}
-        className="rounded-full p-0.5 hover:bg-primary-100"
-      >
-        <X size={12} />
-      </button>
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={`${name}を削除`}
+          onClick={onRemove}
+          className="rounded-full p-0.5 hover:bg-primary-100"
+        >
+          <X size={12} />
+        </button>
+      )}
     </span>
   );
 }

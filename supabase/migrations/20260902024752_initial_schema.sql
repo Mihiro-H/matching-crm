@@ -412,7 +412,7 @@ create table public.integration_logs (
   id uuid primary key default gen_random_uuid(),
   integration_type text not null check (integration_type in ('form', 'cloudsign', 'freee', 'slack', 'zoom')),
   direction text not null check (direction in ('inbound', 'outbound')),
-  related_entity_type text check (related_entity_type in ('contact', 'project', 'estimate', 'invoice')),
+  related_entity_type text check (related_entity_type in ('contact', 'project', 'estimate', 'invoice', 'meeting_note')),
   related_entity_id uuid,
   payload jsonb not null,
   status text not null check (status in ('success', 'failed', 'retrying')),

@@ -2,15 +2,18 @@ import { Building2, Inbox, TrendingUp, Wallet } from "lucide-react";
 import { getDashboardData } from "@/lib/dashboard/get-dashboard-data";
 import { formatCurrencyJPY } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 import { SummaryCard } from "./summary-card";
 import { TodoList } from "./todo-list";
 
 // SCREEN_SPEC.md 1章: view/edit で見た目の差はほぼ無いページのため、
-// 権限による表示分岐はここでは不要。
+// 権限による表示分岐はhidden判定のみ行う。
 export default async function DashboardPage() {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("dashboard");
 
   const { data, errors } = await getDashboardData();
 

@@ -8,7 +8,7 @@ import { UserManagement } from "./user-management";
 import type { Department, UserOption } from "@/lib/settings/get-permissions";
 
 // SCREEN_SPEC.md 10章 9-2: 権限設定は role='admin' のみアクセス可。
-// TODO(auth): 認証実装後、ここで管理者以外をnotFound()にする。
+// admin以外のnotFound()判定は親のsettings/layout.tsx(requireAdminPageAccess)で行う。
 export function PermissionsPageClient({
   departments,
   users,

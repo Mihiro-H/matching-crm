@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { JOB_CATEGORY_LABELS } from "@/lib/job-categories";
 import { formatElapsedTime } from "@/lib/elapsed-time";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 import type { ContactStatus } from "@/lib/supabase/database.types";
 
 // SCREEN_SPEC.md 2章: ステータスフィルターのチップ(すべて/未対応/対応中/商談中)
@@ -23,6 +24,8 @@ export default async function ContactsPage({
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("contacts");
 
   const { status } = await searchParams;
   const statusFilter = STATUS_FILTER_CHIPS.some((chip) => chip.value === status)

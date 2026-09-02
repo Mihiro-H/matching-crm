@@ -1,4 +1,51 @@
-chore: gitignore the scratch commit-message file
+feat: implement auth, real permission enforcement, and integrations (phase C)
+
+Auth (C1):
+- Google OAuth login flow: /login, /auth/callback, src/proxy.ts (Next.js 16
+  renamed middleware -> proxy) guarding all (app) routes
+- Resolve the public.users/auth.users FK conflict noted earlier: no
+  signup trigger; callback rejects sign-in when no public.users row
+  exists; admin provisioning looks up auth.users by email via the
+  service-role admin client once the person has signed in at least once
+- getCurrentUser() (React cache()-memoized), safe post-login redirect
+  (getSafeRedirectPath, hardened against backslash-based open redirects)
+
+Real permission enforcement (C2):
+- requirePageAccess/requireAdminPageAccess gate every screen server-side
+  (blocks direct URL access, not just nav hiding); requireEditAccess/
+  requireAdmin gate every write Server Action
+- canEdit threaded into the UI to disable/hide edit-only controls
+- Fixed a latent bug found while wiring this up: company/project/report
+  detail layouts rendered `children` when Supabase was unconfigured,
+  so nested tab pages still ran their (throwing) data fetchers; they
+  now render a shared SupabaseNotConfiguredNotice instead
+
+Security fixes from the background review on the C1 commit:
+- Added requireAdmin() checks to every admin-only settings Server Action
+  (user provisioning was previously callable by anyone)
+- Hardened getSafeRedirectPath against backslash-based open redirect
+
+Webhooks (C3) + Slack notifications (C4):
+- /api/webhooks/{form,cloudsign,freee,slack,zoom} - Slack and Zoom use
+  their documented signature/challenge schemes; form/cloudsign/freee use
+  a shared-secret placeholder pending real payload/auth docs
+- CloudSign "signed" -> estimates.contract_status + auto-transition the
+  project to contracted; freee "paid" -> invoices.payment_status
+  Zoom transcript-completed -> meeting_notes row with a placeholder
+  ai_summary (real summarization needs an LLM provider decision)
+- sendSlackMessage, triggerNotification(notification_settings), and
+  renderMessageTemplate wired into the form/cloudsign/freee handlers
+- All webhook handlers use the service-role admin client (RLS requires
+  an authenticated session that webhook callers don't have)
+
+Report scheduling (C5):
+- vercel.json cron -> /api/cron/run-reports (hourly), isScheduleDueNow
+  picks up schedules due in the last hour without double-firing
+- computeReportMetrics implements the 6 confirmed metrics; results are
+  snapshotted to report_runs and announced via Slack
+
+Schema fix: integration_logs.related_entity_type was missing
+'meeting_note', so Zoom-related log rows couldn't be linked.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01X5HoDusTPkQyVna1qBNL9Y

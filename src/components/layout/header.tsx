@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { usePageHeader } from "./page-header-context";
+import type { CurrentUser } from "@/lib/auth/current-user";
 
 // TODO(notifications): notification_settings / 実イベントに応じて未読有無を取得する
 const MOCK_HAS_UNREAD_NOTIFICATIONS = true;
@@ -16,7 +17,9 @@ function currentNavLabel(pathname: string): string {
   return match?.label ?? "Orbit";
 }
 
-export function Header() {
+// アカウントメニュー(ログアウト等)はサイドナビ下部に集約している。
+// ヘッダーのアバターは現在ログイン中であることを示す表示のみ。
+export function Header({ currentUser }: { currentUser: CurrentUser | null }) {
   const pathname = usePathname();
   const breadcrumbs = usePageHeader();
   const title = currentNavLabel(pathname);
@@ -57,14 +60,12 @@ export function Header() {
           )}
         </button>
 
-        <button
-          type="button"
-          aria-label="アカウントメニュー"
+        <span
+          aria-label={currentUser ? `ログイン中: ${currentUser.name}` : "未ログイン"}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600"
-          // TODO(auth): アカウントメニュー(ログアウト等)を実装する
         >
-          山
-        </button>
+          {currentUser ? currentUser.name.slice(0, 1) : "?"}
+        </span>
       </div>
     </header>
   );

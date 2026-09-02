@@ -9,10 +9,12 @@ export function ActionItemsChecklist({
   meetingNoteId,
   title,
   initialItems,
+  canEdit,
 }: {
   meetingNoteId: string;
   title: string;
   initialItems: ActionItem[];
+  canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialItems);
   const [error, setError] = useState<string | null>(null);
@@ -45,8 +47,9 @@ export function ActionItemsChecklist({
               <input
                 type="checkbox"
                 checked={item.done}
+                disabled={!canEdit}
                 onChange={() => handleToggle(index)}
-                className="h-4 w-4 accent-primary-500"
+                className="h-4 w-4 accent-primary-500 disabled:opacity-40"
               />
               <span className={item.done ? "text-neutral-400 line-through" : "text-neutral-900"}>
                 {item.text}

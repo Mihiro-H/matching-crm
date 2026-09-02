@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getMeetingNotes, getProjectFilterOptions } from "@/lib/meeting-notes/get-meeting-notes";
 import { formatDateJa } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 
 export default async function MeetingNotesPage({
   searchParams,
@@ -11,6 +12,8 @@ export default async function MeetingNotesPage({
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("meeting_notes");
 
   const params = await searchParams;
   const filter = {

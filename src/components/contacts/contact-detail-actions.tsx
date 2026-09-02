@@ -11,7 +11,13 @@ import { getNextStatusOptions } from "@/lib/contacts/status";
 import { CONTACT_STATUS_META } from "@/lib/status-badges";
 import type { ContactDetail } from "@/lib/contacts/get-contact";
 
-export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
+export function ContactDetailActions({
+  contact,
+  canEdit,
+}: {
+  contact: ContactDetail;
+  canEdit: boolean;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -100,7 +106,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
             <button
               key={status}
               type="button"
-              disabled={isPending}
+              disabled={isPending || !canEdit}
               onClick={() => setShowLostForm((v) => !v)}
               className="rounded-md border border-danger-text px-3 py-1.5 text-sm text-danger-text disabled:opacity-40"
             >
@@ -110,7 +116,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
             <button
               key={status}
               type="button"
-              disabled={isPending}
+              disabled={isPending || !canEdit}
               onClick={handleWonClick}
               className="rounded-md bg-success-text px-3 py-1.5 text-sm text-neutral-0 disabled:opacity-40"
             >
@@ -120,7 +126,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
             <button
               key={status}
               type="button"
-              disabled={isPending}
+              disabled={isPending || !canEdit}
               onClick={() => handleAdvance(status)}
               className="rounded-md bg-primary-500 px-3 py-1.5 text-sm text-neutral-0 disabled:opacity-40"
             >
@@ -132,7 +138,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
         {contact.is_current && (
           <button
             type="button"
-            disabled={isPending}
+            disabled={isPending || !canEdit}
             onClick={() => setShowReplaceForm((v) => !v)}
             className="rounded-md border border-neutral-200 px-3 py-1.5 text-sm text-neutral-600 hover:bg-page-bg disabled:opacity-40"
           >
@@ -154,7 +160,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
           </label>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !canEdit}
             className="self-start rounded-md bg-danger-text px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
           >
             失注として確定
@@ -184,7 +190,7 @@ export function ContactDetailActions({ contact }: { contact: ContactDetail }) {
           </label>
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !canEdit}
             className="self-start rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
           >
             交代を確定

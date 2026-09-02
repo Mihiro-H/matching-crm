@@ -5,11 +5,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 import { isFreeeConfigured } from "@/lib/freee";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 
 export default async function InvoicesPage() {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("invoices");
 
   const { invoices, error } = await getInvoices();
   const freeeConnected = isFreeeConfigured();

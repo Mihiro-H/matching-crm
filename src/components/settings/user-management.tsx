@@ -1,18 +1,48 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createUserFromExistingAuthAccount } from "@/lib/settings/user-provisioning";
 import type { Department, UserOption } from "@/lib/settings/get-permissions";
+import type { UserRole } from "@/lib/supabase/database.types";
+
+const ROLE_LABELS: Record<UserRole, string> = { sales: "営業", accounting: "経理", admin: "管理者" };
 
 /**
  * ユーザー管理(SCREEN_SPEC.md 10章 9-2「部署・ユーザーの管理」)。
- *
- * TODO(auth): 新規ユーザー追加は未実装。public.users.id は auth.users.id への
- * 外部キーのため、その人が一度もGoogleログインしていない状態では
- * public.usersの行を作成できない(supabase/migrations/20260902024752_initial_schema.sql
- * のコメント参照)。「管理者が先にアカウントを作成する」というSCREEN_SPEC.mdの
- * ログイン画面の想定と、このFK制約は矛盾しており、認証実装フェーズで
- * 解決方法(招待テーブルを別途持つ/Supabase Admin APIで先にauth.usersを
- * 作成する、等)を確定させる必要がある。
+ * public.users.id は auth.users.id への外部キーのため、本人が一度も
+ * Googleログインしていない間は登録できない(user-provisioning.ts参照)。
  */
 export function UserManagement({ users, departments }: { users: UserOption[]; departments: Department[] }) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<UserRole>("sales");
+  const [departmentId, setDepartmentId] = useState<string>(departments[0]?.id ?? "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
   const departmentName = (id: string | null) => departments.find((d) => d.id === id)?.name ?? "-";
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setMessage(null);
+    const result = await createUserFromExistingAuthAccount({
+      email,
+      name,
+      role,
+      departmentId: departmentId || null,
+    });
+    setIsSubmitting(false);
+    if (!result.success) {
+      setMessage(result.error);
+      return;
+    }
+    setEmail("");
+    setName("");
+    router.refresh();
+  }
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
@@ -42,8 +72,65 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
         </tbody>
       </table>
 
-      <p className="mt-3 text-xs text-neutral-400">
-        新規ユーザーの追加は認証機能の実装後に対応予定です(Googleログインとアカウント作成の順序を確定する必要があります)。
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap items-end gap-2">
+        {message && <p className="w-full text-sm text-danger-text">{message}</p>}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">メールアドレス</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-56 rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">氏名</span>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-40 rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">ロール</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          >
+            {Object.entries(ROLE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">部署</span>
+          <select
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
+            className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          >
+            <option value="">なし</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
+        >
+          登録
+        </button>
+      </form>
+      <p className="mt-2 text-xs text-neutral-400">
+        本人が一度も「Googleでログイン」を試みていない場合は登録できません(先に一度ログインを試してもらってください)。
       </p>
     </div>
   );

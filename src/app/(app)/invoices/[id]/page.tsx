@@ -4,13 +4,21 @@ import { PAYMENT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 import { buildFreeeInvoiceUrl } from "@/lib/freee";
+import { requirePageAccess } from "@/lib/auth/page-access";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
 
 export default async function InvoiceDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!isSupabaseConfigured()) {
+    return <SupabaseNotConfiguredNotice />;
+  }
+
   const { id } = await params;
+  await requirePageAccess("invoices");
   const invoice = await getInvoiceById(id);
   if (!invoice) {
     notFound();

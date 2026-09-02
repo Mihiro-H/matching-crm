@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import type { PagePermission } from "@/lib/supabase/database.types";
 import { buildBulkPermissionUpserts, type PermissionTemplateRow } from "./permissions";
 
@@ -9,12 +10,15 @@ export type MutationResult = { success: true } | { success: false; error: string
 
 /**
  * 個人別のページ権限を保存する(SCREEN_SPEC.md 10章 9-2)。
- * TODO(permissions): admin以外はこの操作を行えない。認証実装後に追加する。
+ * 権限設定画面はadmin限定のため、サーバー側でも必ず確認する。
  */
 export async function saveUserPermissions(
   userId: string,
   rows: PermissionTemplateRow[]
 ): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("user_page_permissions").upsert(
     rows.map((row) => ({ user_id: userId, page_key: row.pageKey, permission: row.permission })),
@@ -37,6 +41,9 @@ export async function saveDepartmentTemplate(
   departmentId: string,
   rows: PermissionTemplateRow[]
 ): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("department_page_permissions").upsert(
     rows.map((row) => ({ department_id: departmentId, page_key: row.pageKey, permission: row.permission })),
@@ -53,6 +60,9 @@ export async function applyDepartmentTemplateToMembers(
   departmentId: string,
   rows: PermissionTemplateRow[]
 ): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
 
   const { data: members, error: membersError } = await supabase
@@ -81,6 +91,9 @@ export async function applyDepartmentTemplateToMembers(
 }
 
 export async function createDepartment(name: string): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   if (!name.trim()) {
     return { success: false, error: "部署名を入力してください。" };
   }

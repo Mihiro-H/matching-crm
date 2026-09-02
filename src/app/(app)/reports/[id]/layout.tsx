@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { getReportById } from "@/lib/reports/get-report";
 import { ReportDetailShell } from "@/components/reports/report-detail-shell";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
+import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
 
 export default async function ReportDetailLayout({
   children,
@@ -13,8 +15,12 @@ export default async function ReportDetailLayout({
   const { id } = await params;
 
   if (!isSupabaseConfigured()) {
-    return children;
+    // childrenをそのまま返すと、配下のタブページが未接続のままデータ取得を
+    // 試みて例外を投げてしまうため、ここで止めて案内のみ表示する。
+    return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("reports");
 
   const report = await getReportById(id);
   if (!report) {

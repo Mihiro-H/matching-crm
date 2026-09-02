@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
+import { requireEditAccess } from "@/lib/auth/require-edit";
 import type { ReportFrequency } from "@/lib/supabase/database.types";
 import type { ReportMetricKey } from "./metrics";
 
@@ -24,11 +25,16 @@ export type SaveReportResult = { success: true; id: string } | { success: false;
 /**
  * レポート作成/編集の「保存」(SCREEN_SPEC.md 8章): reports + report_schedules を作成/更新する。
  *
+ * view権限のユーザーはこの操作を行えない(SCREEN_SPEC.md「権限」)。
+ *
  * TODO(auth): reports.created_by(NOT NULL)に実ユーザーIDが必要なため、
- * 認証未実装の間は新規作成できない(編集は既存レポートのcreated_byを変更しないため可)。
- * TODO(permissions): view権限のユーザーはこの操作を行えない。
+ * ユーザーがpublic.usersに未登録の間は新規作成できない
+ * (編集は既存レポートのcreated_byを変更しないため可)。
  */
 export async function saveReport(input: SaveReportInput): Promise<SaveReportResult> {
+  const authCheck = await requireEditAccess("reports");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
 
   let reportId = input.reportId;
@@ -85,6 +91,11 @@ export async function saveReport(input: SaveReportInput): Promise<SaveReportResu
 }
 
 export async function deleteReport(reportId: string): Promise<void> {
+  const authCheck = await requireEditAccess("reports");
+  if (!authCheck.ok) {
+    redirect(`/reports/${reportId}`);
+  }
+
   const supabase = await createSupabaseServerClient();
   await supabase.from("reports").delete().eq("id", reportId);
   revalidatePath("/reports");

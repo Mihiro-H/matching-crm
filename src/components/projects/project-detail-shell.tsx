@@ -22,11 +22,13 @@ export function ProjectDetailShell({
   project,
   assignees,
   roles,
+  canEdit,
   children,
 }: {
   project: ProjectDetail;
   assignees: ProjectAssignee[];
   roles: ProjectRole[];
+  canEdit: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -62,8 +64,8 @@ export function ProjectDetailShell({
         </dl>
       </div>
 
-      <AssigneeSection projectId={project.id} initialAssignees={assignees} />
-      <JobRolesSection projectId={project.id} initialRoles={roles} />
+      <AssigneeSection projectId={project.id} initialAssignees={assignees} canEdit={canEdit} />
+      <JobRolesSection projectId={project.id} initialRoles={roles} canEdit={canEdit} />
 
       <nav className="flex gap-1 border-b border-neutral-100">
         {TABS.map((tab) => {

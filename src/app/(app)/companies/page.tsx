@@ -9,6 +9,7 @@ import {
 import { COMPANY_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 import type { CompanyStatus } from "@/lib/supabase/database.types";
 
 const COLUMN_LABELS: Record<CompanySortColumn, string> = {
@@ -35,6 +36,8 @@ export default async function CompaniesPage({
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("companies");
 
   const resolvedParams = await searchParams;
   const params = parseCompaniesListParams(resolvedParams);

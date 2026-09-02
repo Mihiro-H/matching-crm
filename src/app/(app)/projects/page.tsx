@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getProjects } from "@/lib/projects/get-projects";
 import { parseProjectsListParams } from "@/lib/projects/list-params";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 import { ProjectsTable } from "@/components/projects/projects-table";
 import { ProjectsKanban } from "@/components/projects/projects-kanban";
 
@@ -13,6 +14,8 @@ export default async function ProjectsPage({
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  const { canEdit } = await requirePageAccess("projects");
 
   const resolvedParams = await searchParams;
   const params = parseProjectsListParams(resolvedParams);
@@ -39,7 +42,7 @@ export default async function ProjectsPage({
       )}
 
       {!error && params.view === "table" && <ProjectsTable projects={projects} params={params} />}
-      {!error && params.view === "kanban" && <ProjectsKanban projects={projects} />}
+      {!error && params.view === "kanban" && <ProjectsKanban projects={projects} canEdit={canEdit} />}
     </div>
   );
 }

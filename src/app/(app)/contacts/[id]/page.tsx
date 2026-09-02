@@ -5,6 +5,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { JOB_CATEGORY_LABELS } from "@/lib/job-categories";
 import { formatDateJa } from "@/lib/format";
 import { ContactDetailActions } from "@/components/contacts/contact-detail-actions";
+import { requirePageAccess } from "@/lib/auth/page-access";
+import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
 
 const SOURCE_LABELS: Record<string, string> = { form: "フォーム", referral: "紹介", other: "その他" };
 
@@ -13,7 +16,12 @@ export default async function ContactDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!isSupabaseConfigured()) {
+    return <SupabaseNotConfiguredNotice />;
+  }
+
   const { id } = await params;
+  const { canEdit } = await requirePageAccess("contacts");
   const contact = await getContactById(id);
   if (!contact) {
     notFound();
@@ -82,7 +90,7 @@ export default async function ContactDetailPage({
         </dl>
       </div>
 
-      <ContactDetailActions contact={contact} />
+      <ContactDetailActions contact={contact} canEdit={canEdit} />
     </div>
   );
 }

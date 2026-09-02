@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getReports } from "@/lib/reports/get-reports";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 
 const FREQUENCY_LABELS = { weekly: "週次", monthly: "月次" } as const;
 const RUN_STATUS_LABELS = { success: "成功", failed: "失敗" } as const;
@@ -10,15 +11,18 @@ export default async function ReportsPage() {
     return <SupabaseNotConfiguredNotice />;
   }
 
+  const { canEdit } = await requirePageAccess("reports");
   const { reports, error } = await getReports();
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Link href="/reports/new" className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0">
-          +レポートを作成
-        </Link>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Link href="/reports/new" className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0">
+            +レポートを作成
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-danger-bg bg-danger-bg p-4 text-sm text-danger-text">

@@ -41,7 +41,7 @@ export type ReportFrequency = "weekly" | "monthly";
 export type ReportRunStatus = "success" | "failed";
 export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom";
 export type IntegrationDirection = "inbound" | "outbound";
-export type IntegrationRelatedEntityType = "contact" | "project" | "estimate" | "invoice";
+export type IntegrationRelatedEntityType = "contact" | "project" | "estimate" | "invoice" | "meeting_note";
 export type IntegrationLogStatus = "success" | "failed" | "retrying";
 
 export interface Database {

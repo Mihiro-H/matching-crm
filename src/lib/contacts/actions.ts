@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireEditAccess } from "@/lib/auth/require-edit";
 import type { ContactStatus } from "@/lib/supabase/database.types";
 import { getNextStatusOptions } from "./status";
 
@@ -10,15 +11,16 @@ export type MutationResult = { success: true } | { success: false; error: string
 /**
  * new→in_progress、in_progress→negotiating など、
  * 単純なステータス進行(SCREEN_SPEC.md 2章)。won/lostは専用アクションを使う。
- *
- * TODO(permissions): view権限のユーザーはこの操作を行えない
- * (SCREEN_SPEC.md「権限: viewはステータス変更...を不可」)。認証実装後に追加する。
+ * view権限のユーザーはこの操作を行えない(SCREEN_SPEC.md「権限」)。
  */
 export async function advanceContactStatus(
   contactId: string,
   currentStatus: ContactStatus,
   newStatus: "in_progress" | "negotiating"
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("contacts");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   if (!(getNextStatusOptions(currentStatus) as ContactStatus[]).includes(newStatus)) {
     return { success: false, error: "その状態には変更できません。" };
   }
@@ -35,6 +37,9 @@ export async function advanceContactStatus(
 
 /** 失注にする。lost_reasonの入力を必須にする(SCREEN_SPEC.md 2章) */
 export async function markContactLost(contactId: string, lostReason: string): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("contacts");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   if (!lostReason.trim()) {
     return { success: false, error: "失注理由を入力してください。" };
   }
@@ -57,6 +62,9 @@ export async function markContactLost(contactId: string, lostReason: string): Pr
  * セットし、status='won'・is_current=true・started_atを当日日付にする。
  */
 export async function markContactWon(contactId: string, companyId: string): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("contacts");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
   const { error } = await supabase
@@ -86,6 +94,9 @@ export async function replaceContact(
   currentContactId: string,
   newContact: { name: string; email: string | null }
 ): Promise<ReplaceContactResult> {
+  const authCheck = await requireEditAccess("contacts");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
 
   const { data: current, error: fetchError } = await supabase

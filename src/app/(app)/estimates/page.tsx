@@ -4,6 +4,7 @@ import { CONTRACT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
 
 const DOCUMENT_TYPE_LABELS = { estimate: "見積書", order: "発注書" } as const;
 
@@ -12,18 +13,21 @@ export default async function EstimatesPage() {
     return <SupabaseNotConfiguredNotice />;
   }
 
+  const { canEdit } = await requirePageAccess("estimates");
   const { estimates, error } = await getEstimates();
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Link
-          href="/estimates/new"
-          className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0"
-        >
-          +見積・発注を作成
-        </Link>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Link
+            href="/estimates/new"
+            className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0"
+          >
+            +見積・発注を作成
+          </Link>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-danger-bg bg-danger-bg p-4 text-sm text-danger-text">

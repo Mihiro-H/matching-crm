@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
-// TODO(auth): 認証実装後は、セッション有無に応じて /login または /dashboard へ振り分ける
+// 未ログインの場合はsrc/proxy.tsが先に/loginへリダイレクトするため、
+// ここに到達するのは認証済みの場合のみ。
 export default function RootPage() {
   redirect("/dashboard");
 }

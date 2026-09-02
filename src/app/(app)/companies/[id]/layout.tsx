@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { CompanyDetailShell } from "@/components/companies/company-detail-shell";
 import { getCompanyById } from "@/lib/companies/get-company";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requirePageAccess } from "@/lib/auth/page-access";
+import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
 
 export default async function CompanyDetailLayout({
   children,
@@ -13,8 +15,13 @@ export default async function CompanyDetailLayout({
   const { id } = await params;
 
   if (!isSupabaseConfigured()) {
-    return children;
+    // childrenをそのまま返すと、配下のタブページが未接続のままデータ取得を
+    // 試みて例外を投げてしまう(createSupabaseServerClientはthrowする)ため、
+    // ここで止めて案内のみ表示する。
+    return <SupabaseNotConfiguredNotice />;
   }
+
+  await requirePageAccess("companies");
 
   const company = await getCompanyById(id);
   if (!company) {

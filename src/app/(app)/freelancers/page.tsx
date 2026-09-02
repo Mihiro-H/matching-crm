@@ -2,13 +2,15 @@ import { getFreelancers } from "@/lib/freelancers/get-freelancers";
 import { JOB_CATEGORY_LABELS } from "@/lib/job-categories";
 import { CsvImportButton } from "@/components/freelancers/csv-import-button";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { requireAdminPageAccess } from "@/lib/auth/page-access";
 
-// TODO(auth): role='admin'以外はアクセス不可にする(SCREEN_SPEC.md 9章「アクセス制限」)。
-// 認証実装後、ここでロールチェックを行い、admin以外はnotFound()する。
+// SCREEN_SPEC.md 9章「アクセス制限」: role='admin'以外はURLを直接叩いてもアクセス不可。
 export default async function FreelancersPage() {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
+
+  await requireAdminPageAccess();
 
   const { freelancers, error } = await getFreelancers();
 

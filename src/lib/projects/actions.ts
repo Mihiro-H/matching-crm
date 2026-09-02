@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireEditAccess } from "@/lib/auth/require-edit";
 import type { ProjectStatus } from "@/lib/supabase/database.types";
 import { isManualDropAllowed } from "./status-transitions";
 import type { JobCategory } from "@/lib/supabase/database.types";
@@ -12,15 +13,15 @@ export type UpdateProjectStatusResult = { success: true } | { success: false; er
  * カンバンビュー(SCREEN_SPEC.md 4章)でのドラッグ&ドロップによる手動ステータス変更。
  * `contracted` への手動遷移はクラウドサインWebhook経由専用のためサーバー側でも拒否する
  * (UI側のグレーアウトを迂回されても安全なように)。
- *
- * TODO(permissions): view権限のユーザーはこの操作を行えない
- * (SCREEN_SPEC.md「権限: viewはステータスのドラッグ操作...を不可」)。
- * 認証/権限実装後にここでチェックを追加する。
+ * view権限のユーザーはこの操作を行えない(SCREEN_SPEC.md「権限」)。
  */
 export async function updateProjectStatus(
   projectId: string,
   newStatus: ProjectStatus
 ): Promise<UpdateProjectStatusResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   if (!isManualDropAllowed(newStatus)) {
     return {
       success: false,
@@ -49,13 +50,14 @@ export type MutationResult = { success: true } | { success: false; error: string
  * 既存の主担当がいれば「サブ担当」に降格し、新しい担当者を主担当にする
  * (project_assigneesは(project_id, user_id)がユニークのため、
  * 同一ユーザーが主担当とサブ担当を同時に持つことはできない)。
- *
- * TODO(permissions): view権限のユーザーはこの操作を行えない。認証実装後に追加する。
  */
 export async function setPrimaryAssignee(
   projectId: string,
   userId: string
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
 
   const { data: existing, error: fetchError } = await supabase
@@ -99,6 +101,9 @@ export async function addSecondaryAssignee(
   projectId: string,
   userId: string
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("project_assignees")
@@ -118,6 +123,9 @@ export async function removeAssignee(
   projectId: string,
   assigneeId: string
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("project_assignees").delete().eq("id", assigneeId);
 
@@ -135,6 +143,9 @@ export async function addProjectRole(
   jobCategory: JobCategory,
   headcount: number
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("project_roles")
@@ -153,6 +164,9 @@ export async function removeProjectRole(
   projectId: string,
   roleId: string
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("project_roles").delete().eq("id", roleId);
 
@@ -174,6 +188,9 @@ export async function assignFreelancersToRole(
   roleId: string,
   freelancerIds: string[]
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
   const { error } = await supabase.from("project_role_assignments").insert(
@@ -197,6 +214,9 @@ export async function removeFreelancerAssignment(
   projectId: string,
   assignmentId: string
 ): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("project_role_assignments")

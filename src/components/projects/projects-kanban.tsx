@@ -9,7 +9,13 @@ import { PROJECT_STATUS_ORDER, isManualDropAllowed } from "@/lib/projects/status
 import { updateProjectStatus } from "@/lib/projects/actions";
 import { formatRoleSummary } from "@/lib/job-categories";
 
-export function ProjectsKanban({ projects: initialProjects }: { projects: ProjectListRow[] }) {
+export function ProjectsKanban({
+  projects: initialProjects,
+  canEdit,
+}: {
+  projects: ProjectListRow[];
+  canEdit: boolean;
+}) {
   const [projects, setProjects] = useState(initialProjects);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +54,7 @@ export function ProjectsKanban({ projects: initialProjects }: { projects: Projec
         {PROJECT_STATUS_ORDER.map((status) => {
           const meta = PROJECT_STATUS_META[status];
           const columnProjects = projects.filter((p) => p.status === status);
-          const dropAllowed = isManualDropAllowed(status);
+          const dropAllowed = canEdit && isManualDropAllowed(status);
 
           return (
             <div
@@ -63,7 +69,7 @@ export function ProjectsKanban({ projects: initialProjects }: { projects: Projec
               }}
               onDrop={(e) => {
                 e.preventDefault();
-                if (draggingId) handleDrop(status, draggingId);
+                if (dropAllowed && draggingId) handleDrop(status, draggingId);
               }}
             >
               <h3 className="text-sm text-neutral-900">
@@ -75,12 +81,12 @@ export function ProjectsKanban({ projects: initialProjects }: { projects: Projec
                 {columnProjects.map((project) => (
                   <div
                     key={project.id}
-                    draggable
+                    draggable={canEdit}
                     onDragStart={() => setDraggingId(project.id)}
                     onDragEnd={() => setDraggingId(null)}
-                    className={`cursor-move rounded-md border border-neutral-200 bg-neutral-0 p-3 ${
-                      isPending ? "opacity-70" : ""
-                    }`}
+                    className={`rounded-md border border-neutral-200 bg-neutral-0 p-3 ${
+                      canEdit ? "cursor-move" : ""
+                    } ${isPending ? "opacity-70" : ""}`}
                   >
                     <Link href={`/projects/${project.id}`} className="text-sm text-primary-600 hover:underline">
                       {project.title}
