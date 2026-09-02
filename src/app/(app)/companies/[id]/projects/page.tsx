@@ -25,8 +25,7 @@ export default async function CompanyProjectsTab({
       {projects.map((project) => (
         <Link
           key={project.id}
-          // TODO: /projects/[id] の案件詳細ページ実装後にそちらへ差し替える
-          href="/projects"
+          href={`/projects/${project.id}`}
           className="rounded-lg border border-neutral-200 bg-neutral-0 p-4 hover:border-primary-500"
         >
           <div className="flex items-start justify-between">
