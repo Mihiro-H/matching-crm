@@ -12,3 +12,9 @@ export function formatCurrencyJPY(amount: number): string {
 export function formatDateJa(iso: string): string {
   return iso.slice(0, 10).replace(/-/g, "/");
 }
+
+/** 議事録一覧カードの「AI要約の冒頭」表示(SCREEN_SPEC.md 6章)など、長文の先頭を切り出す */
+export function excerpt(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}…`;
+}

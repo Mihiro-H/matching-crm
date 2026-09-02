@@ -54,6 +54,26 @@ export async function searchCompanies(query: string): Promise<SearchResultItem[]
   return (data ?? []).map((row) => ({ id: row.id, label: row.name, sublabel: row.industry }));
 }
 
+/** 案件選択(SCREEN_SPEC.md 5章「見積・発注」作成画面: 案件を選択すると企業は自動入力) */
+export async function searchProjects(query: string): Promise<SearchResultItem[]> {
+  const supabase = await createSupabaseServerClient();
+  let request = supabase
+    .from("projects")
+    .select("id, title, company:companies(name)")
+    .order("created_at", { ascending: false })
+    .limit(SEARCH_LIMIT);
+  if (query.trim()) {
+    request = request.ilike("title", `%${query.trim()}%`);
+  }
+  const { data, error } = await request;
+  if (error) throw new Error(`案件の検索に失敗しました: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    label: row.title,
+    sublabel: row.company?.name ?? null,
+  }));
+}
+
 /**
  * 企業選択モーダルからのインライン新規登録
  * (SCREEN_SPEC.md「企業選択モーダルの新規作成フロー」)。

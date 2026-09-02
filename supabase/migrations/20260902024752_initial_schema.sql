@@ -310,7 +310,7 @@ create trigger set_updated_at
 -- =========================================================================
 create table public.notification_settings (
   id uuid primary key default gen_random_uuid(),
-  event_type text not null check (event_type in ('new_lead', 'contract_signed', 'payment_confirmed', 'reminder')),
+  event_type text not null unique check (event_type in ('new_lead', 'contract_signed', 'payment_confirmed', 'reminder')),
   slack_channel_id text not null,
   message_template text not null,
   is_active boolean not null default true,
