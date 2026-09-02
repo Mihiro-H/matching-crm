@@ -18,12 +18,18 @@ import { isFromCloudSignIpRange } from "@/lib/webhooks/cloudsign-ip-allowlist";
  * ただしURLはアクセスログ等に残りうるため、それだけでは不十分と判断し、公式ヘルプ
  * 「Webhook実行時の挙動」に記載の送信元固定IP(isFromCloudSignIpRange)も必須条件にする。
  * URLが漏れてもIPが一致しなければ通らない。
+ *
+ * IP取得元は`x-forwarded-for`ではなく`x-vercel-forwarded-for`を使う。標準の
+ * `x-forwarded-for`はクライアントが自由な値を送りつけられ、Vercelが必ず上書き/除去する
+ * とは限らないため、先頭要素だけを信頼するとなりすましの余地がある(実際に自動セキュリティ
+ * レビューで指摘された)。`x-vercel-forwarded-for`はVercelのエッジが設定する値で、
+ * クライアント側からは偽装できない。そのためこのIPチェックはVercelへのデプロイ前提。
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.CLOUDSIGN_WEBHOOK_SECRET;
   const provided = request.nextUrl.searchParams.get("secret");
   const env = process.env.CLOUDSIGN_ENV === "production" ? "production" : "sandbox";
-  const forwardedFor = request.headers.get("x-forwarded-for");
+  const forwardedFor = request.headers.get("x-vercel-forwarded-for");
 
   if (!secret || !verifySharedSecret(secret, provided) || !isFromCloudSignIpRange(forwardedFor, env)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

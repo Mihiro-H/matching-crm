@@ -12,16 +12,17 @@ const CLOUDSIGN_WEBHOOK_IPS: Record<CloudSignEnv, readonly string[]> = {
 };
 
 /**
- * Vercelのようなエッジプロキシ配下では、`x-forwarded-for` の先頭が実クライアントIP
- * (プロキシが自ら付与する値で、クライアントからの偽装分は上書きされる)。
- * 2つ目以降は中継プロキシのIPが並ぶため使わない。
+ * 引数には、クライアントが偽装できないことが保証された値を渡すこと
+ * (例: Vercelの`x-vercel-forwarded-for`。標準の`x-forwarded-for`はクライアントが
+ * 自由な値を書き込め、プラットフォームが必ず上書き/除去するとは限らないため不可)。
+ * 先頭要素のみを実クライアントIPとして扱う。2つ目以降は中継プロキシのIPが並びうるため使わない。
  */
 export function isFromCloudSignIpRange(
-  xForwardedFor: string | null,
+  trustedClientIpHeader: string | null,
   env: CloudSignEnv
 ): boolean {
-  if (!xForwardedFor) return false;
-  const clientIp = xForwardedFor.split(",")[0]?.trim();
+  if (!trustedClientIpHeader) return false;
+  const clientIp = trustedClientIpHeader.split(",")[0]?.trim();
   if (!clientIp) return false;
   return CLOUDSIGN_WEBHOOK_IPS[env].includes(clientIp);
 }
