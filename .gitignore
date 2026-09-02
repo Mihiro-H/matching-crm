@@ -48,3 +48,6 @@ next-env.d.ts
 # supabase
 supabase/.branches
 supabase/.temp
+
+# 作業用コミットメッセージ(サンドボックスから直接git commitできないための一時ファイル)
+.commit-msg.txt

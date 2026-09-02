@@ -1,45 +1,4 @@
-feat: implement phase B screens (estimates, meeting notes, invoices, freelancers, reports, settings)
-
-Estimates:
-- List + creation flow (project search auto-fills company, lightweight
-  HTML PDF preview, CloudSign send is stubbed pending real integration)
-
-Meeting notes:
-- List with company/project/date-range filters, card summaries
-  (AI-summary excerpt, pending action-item badge)
-- Detail with a toggleable action-item checklist
-
-Invoices:
-- Read-only list + detail per spec (no edit UI at all); freee link
-  builder and a "freee connected" indicator both honestly reflect
-  FREEE_CLIENT_ID rather than hardcoding a connected state
-- Payment-status history sourced from integration_logs
-
-Freelancers:
-- Read-only list + CSV import (papaparse) with per-row validation,
-  upsert-by-platform_freelancer_id, and csv_imports history logging
-
-Reports:
-- List, create/edit form (metrics checkboxes, weekly/monthly schedule,
-  Slack template with placeholder help), run-history tab
-- next-run-at calculation, including the previously-open month-end
-  clamping decision (day_of_month > days in month clamps to last day)
-
-Settings:
-- Notification settings per event type
-- Permissions: individual editor, department template + bulk-apply to
-  members, department creation, and a read-only user list (new-user
-  creation is blocked on the public.users/auth.users FK conflict noted
-  in the schema migration, not implemented here)
-
-Infra fixes found along the way:
-- Add vitest.config.mts (path alias resolution was missing, so `@/`
-  imports only worked by accident in modules nothing had imported yet)
-- Split several data-fetching modules so client components never
-  import a `next/headers`-dependent module directly (Next.js inlines
-  the whole module otherwise); mark the async fetchers "use server"
-  and keep plain constants in sibling files
-- Add a missing unique constraint on notification_settings.event_type
+chore: gitignore the scratch commit-message file
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01X5HoDusTPkQyVna1qBNL9Y
