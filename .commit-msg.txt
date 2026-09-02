@@ -1,0 +1,33 @@
+feat: implement core Orbit screens (dashboard, companies, projects, contacts)
+
+Database:
+- Add full initial schema migration (19 tables from DB_SCHEMA.md) with
+  baseline RLS (authenticated-only), status/category CHECK constraints,
+  and updated_at triggers
+- Add company_list_view and project_list_view for list-screen joins
+  (security_invoker=true to preserve RLS through the view)
+
+Screens:
+- Dashboard: summary cards + "today's tasks" list
+- Companies: sortable/filterable list, detail with
+  projects/estimates/invoices/contact-history tabs
+- Projects: table/kanban list (native HTML5 drag & drop for status,
+  server-side rejection of manual "contracted" transitions), detail with
+  assignee management, job-role + freelancer assignment, and
+  estimates/invoices/meeting-notes tabs
+- Contacts ("商談・担当者管理", renamed from 問い合わせ管理): card list with
+  status chips, detail with status pipeline actions, lost-reason capture,
+  win-with-company-linking, and contact handover flow
+
+Shared infrastructure:
+- Generic SearchSelectModal (single/multiple select, incremental search,
+  inline "create new" flow) used by company/user/freelancer search
+- Hand-written Supabase Database types (Tables/Views/Relationships) as a
+  stand-in for `supabase gen types` until a live project exists
+- status-badges.ts centralizing every status's DESIGN_TOKENS.md semantic
+  color mapping; job-categories.ts for job category labels
+- Vitest test suite (debounce, status transitions, list-param parsing,
+  formatting, status-badge mappings) written test-first throughout
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01X5HoDusTPkQyVna1qBNL9Y
