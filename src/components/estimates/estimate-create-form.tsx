@@ -6,6 +6,7 @@ import { SearchSelectModal, type SearchResultItem } from "@/components/ui/search
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
 import { searchProjects } from "@/lib/search-select/actions";
 import { createAndSendEstimate } from "@/lib/estimates/actions";
+import { getProjectSigningInfo } from "@/lib/estimates/get-signing-info";
 import { formatCurrencyJPY } from "@/lib/format";
 import type { EstimateDocumentType } from "@/lib/supabase/database.types";
 
@@ -21,9 +22,20 @@ export function EstimateCreateForm() {
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [documentType, setDocumentType] = useState<EstimateDocumentType>("estimate");
   const [amount, setAmount] = useState<number>(0);
+  const [signerEmail, setSignerEmail] = useState("");
+  const [signerName, setSignerName] = useState("");
   const [showPreview, setShowPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function handleSelectProject(item: SearchResultItem) {
+    setProject(item);
+    // 企業に登録済みの送付先メール(無ければ最新の担当者)を初期値として埋める。
+    // あくまで初期値なので、この後ユーザーが自由に上書きできる。
+    const signingInfo = await getProjectSigningInfo(item.id);
+    setSignerEmail(signingInfo?.signerEmail ?? "");
+    setSignerName(signingInfo?.signerName ?? "");
+  }
 
   async function handleSend() {
     setError(null);
@@ -35,8 +47,18 @@ export function EstimateCreateForm() {
       setError("金額を入力してください。");
       return;
     }
+    if (!signerEmail.trim() || !signerName.trim()) {
+      setError("クラウドサインの送付先(氏名・メールアドレス)を入力してください。");
+      return;
+    }
     setIsSubmitting(true);
-    const result = await createAndSendEstimate({ projectId: project.id, documentType, amount });
+    const result = await createAndSendEstimate({
+      projectId: project.id,
+      documentType,
+      amount,
+      signerEmail,
+      signerName,
+    });
     setIsSubmitting(false);
     if (!result.success) {
       setError(result.error);
@@ -89,6 +111,28 @@ export function EstimateCreateForm() {
               className="w-48 rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
             />
           </label>
+
+          <div className="flex flex-col gap-1 rounded-md border border-neutral-100 bg-page-bg p-3">
+            <span className="text-xs text-neutral-600">
+              クラウドサイン送付先(案件を選択すると企業に登録済みの送付先を自動入力します。この場で上書きすると次回以降のデフォルトも更新されます)
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                placeholder="宛先氏名"
+                value={signerName}
+                onChange={(e) => setSignerName(e.target.value)}
+                className="w-48 rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              />
+              <input
+                type="email"
+                placeholder="宛先メールアドレス"
+                value={signerEmail}
+                onChange={(e) => setSignerEmail(e.target.value)}
+                className="w-64 rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              />
+            </div>
+          </div>
         </div>
 
         <div className="mt-6 flex gap-2">
@@ -123,7 +167,7 @@ export function EstimateCreateForm() {
         search={searchProjects}
         onConfirm={(items) => {
           const [item] = items;
-          if (item) setProject(item);
+          if (item) void handleSelectProject(item);
         }}
       />
 

@@ -4,20 +4,28 @@ import { logIntegrationEvent } from "@/lib/integrations/log";
 import { triggerNotification } from "@/lib/slack/notify";
 import { parseCloudSignEvent } from "@/lib/webhooks/parse-cloudsign-event";
 import { verifySharedSecret } from "@/lib/webhooks/verify-signature";
+import { isFromCloudSignIpRange } from "@/lib/webhooks/cloudsign-ip-allowlist";
 
 /**
  * クラウドサインWebhook(SCREEN_SPEC.md 5章)。
  * 「signed」になった場合、該当estimatesとprojectのステータスを自動更新する
  * (project.statusをcontractedへ遷移させる手動ドラッグ不可の仕様の裏側)。
  *
- * 認証は共有シークレット方式(暫定)。クラウドサイン公式の署名検証方式が
- * 確認でき次第、verifySharedSecretを適切な実装に置き換えること。
+ * 認証は「URLクエリパラメータの共有シークレット」+「送信元IPアローリスト」の二重防御。
+ * クラウドサインはWebhook送信時にカスタムヘッダーを付与する機能を提供していない
+ * (公式ヘルプ「Webhook 機能」で確認済み。送るのはContent-Type/User-Agentのみ)ため、
+ * クラウドサイン側の通知先設定画面に登録するURL自体に ?secret=... を埋め込んで照合する。
+ * ただしURLはアクセスログ等に残りうるため、それだけでは不十分と判断し、公式ヘルプ
+ * 「Webhook実行時の挙動」に記載の送信元固定IP(isFromCloudSignIpRange)も必須条件にする。
+ * URLが漏れてもIPが一致しなければ通らない。
  */
 export async function POST(request: NextRequest) {
   const secret = process.env.CLOUDSIGN_WEBHOOK_SECRET;
-  const provided = request.headers.get("x-webhook-secret");
+  const provided = request.nextUrl.searchParams.get("secret");
+  const env = process.env.CLOUDSIGN_ENV === "production" ? "production" : "sandbox";
+  const forwardedFor = request.headers.get("x-forwarded-for");
 
-  if (!secret || !verifySharedSecret(secret, provided)) {
+  if (!secret || !verifySharedSecret(secret, provided) || !isFromCloudSignIpRange(forwardedFor, env)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -59,7 +67,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "estimate not found" }, { status: 404 });
   }
 
-  if (parsed.data.status === "ignored") {
+  if (parsed.data.status === "unknown") {
+    // 未確認のstatusコード。誤ってestimateの状態を変えるより、ログに残して
+    // 何もしない方が安全(parse-cloudsign-event.tsのコメント参照)。
     await logIntegrationEvent({
       integrationType: "cloudsign",
       direction: "inbound",
@@ -71,28 +81,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  if (parsed.data.status === "signed") {
-    await admin
-      .from("estimates")
-      .update({ contract_status: "signed", signed_at: new Date().toISOString() })
-      .eq("id", estimate.id);
+  await admin
+    .from("estimates")
+    .update({ contract_status: "signed", signed_at: new Date().toISOString() })
+    .eq("id", estimate.id);
 
-    // SCREEN_SPEC.md 5章: signedになると該当project.statusが自動的にcontractedへ遷移する
-    await admin.from("projects").update({ status: "contracted" }).eq("id", estimate.project_id);
+  // SCREEN_SPEC.md 5章: signedになると該当project.statusが自動的にcontractedへ遷移する
+  await admin.from("projects").update({ status: "contracted" }).eq("id", estimate.project_id);
 
-    const { data: project } = await admin
-      .from("projects")
-      .select("title, company:companies(name)")
-      .eq("id", estimate.project_id)
-      .maybeSingle();
+  const { data: project } = await admin
+    .from("projects")
+    .select("title, company:companies(name)")
+    .eq("id", estimate.project_id)
+    .maybeSingle();
 
-    await triggerNotification("contract_signed", {
-      company_name: project?.company?.name ?? "",
-      project_title: project?.title ?? "",
-    });
-  } else {
-    await admin.from("estimates").update({ contract_status: "rejected" }).eq("id", estimate.id);
-  }
+  await triggerNotification("contract_signed", {
+    company_name: project?.company?.name ?? "",
+    project_title: project?.title ?? "",
+  });
 
   await logIntegrationEvent({
     integrationType: "cloudsign",
