@@ -2,13 +2,11 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Bell } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { usePageHeader } from "./page-header-context";
+import { NotificationBell } from "./notification-bell";
 import type { CurrentUser } from "@/lib/auth/current-user";
-
-// TODO(notifications): notification_settings / 実イベントに応じて未読有無を取得する
-const MOCK_HAS_UNREAD_NOTIFICATIONS = true;
+import type { NotificationItem } from "@/lib/notifications/actions";
 
 function currentNavLabel(pathname: string): string {
   const match = NAV_ITEMS.find(
@@ -19,7 +17,15 @@ function currentNavLabel(pathname: string): string {
 
 // アカウントメニュー(ログアウト等)はサイドナビ下部に集約している。
 // ヘッダーのアバターは現在ログイン中であることを示す表示のみ。
-export function Header({ currentUser }: { currentUser: CurrentUser | null }) {
+export function Header({
+  currentUser,
+  initialNotifications,
+  initialUnreadNotificationCount,
+}: {
+  currentUser: CurrentUser | null;
+  initialNotifications: NotificationItem[];
+  initialUnreadNotificationCount: number;
+}) {
   const pathname = usePathname();
   const breadcrumbs = usePageHeader();
   const title = currentNavLabel(pathname);
@@ -48,17 +54,10 @@ export function Header({ currentUser }: { currentUser: CurrentUser | null }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <button
-          type="button"
-          aria-label="通知"
-          className="relative rounded-full p-2 text-neutral-600 hover:bg-page-bg"
-          // TODO(notifications): 通知一覧の実装
-        >
-          <Bell size={20} />
-          {MOCK_HAS_UNREAD_NOTIFICATIONS && (
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning-text" />
-          )}
-        </button>
+        <NotificationBell
+          initialItems={initialNotifications}
+          initialUnreadCount={initialUnreadNotificationCount}
+        />
 
         <span
           aria-label={currentUser ? `ログイン中: ${currentUser.name}` : "未ログイン"}

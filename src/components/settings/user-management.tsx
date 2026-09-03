@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createUserFromExistingAuthAccount } from "@/lib/settings/user-provisioning";
+import { setLeadDistributor } from "@/lib/settings/permission-actions";
 import type { Department, UserOption } from "@/lib/settings/get-permissions";
 import type { UserRole } from "@/lib/supabase/database.types";
 
@@ -23,6 +24,15 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
   const [message, setMessage] = useState<string | null>(null);
 
   const departmentName = (id: string | null) => departments.find((d) => d.id === id)?.name ?? "-";
+
+  async function handleToggleLeadDistributor(userId: string, next: boolean) {
+    const result = await setLeadDistributor(userId, next);
+    if (!result.success) {
+      setMessage(result.error);
+      return;
+    }
+    router.refresh();
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -53,6 +63,7 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
           <tr className="border-b border-neutral-100 text-neutral-600">
             <th className="py-2 font-medium">氏名</th>
             <th className="py-2 font-medium">部署</th>
+            <th className="py-2 font-medium">案件振り分け担当者</th>
           </tr>
         </thead>
         <tbody>
@@ -60,17 +71,29 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
             <tr key={u.id} className="border-b border-neutral-100 last:border-0">
               <td className="py-2 text-neutral-900">{u.name}</td>
               <td className="py-2 text-neutral-600">{departmentName(u.departmentId)}</td>
+              <td className="py-2">
+                <input
+                  type="checkbox"
+                  checked={u.isLeadDistributor}
+                  onChange={(e) => handleToggleLeadDistributor(u.id, e.target.checked)}
+                  aria-label={`${u.name}を案件振り分け担当者にする`}
+                  className="h-4 w-4 rounded border-neutral-200 text-primary-500 focus:ring-primary-100"
+                />
+              </td>
             </tr>
           ))}
           {users.length === 0 && (
             <tr>
-              <td colSpan={2} className="py-4 text-center text-neutral-600">
+              <td colSpan={3} className="py-4 text-center text-neutral-600">
                 ユーザーが登録されていません。
               </td>
             </tr>
           )}
         </tbody>
       </table>
+      <p className="mt-2 text-xs text-neutral-400">
+        案件振り分け担当者は、新規問い合わせ発生時にヘッダーの通知(ベル)を受け取ります。複数人を指定できます。
+      </p>
 
       <form onSubmit={handleSubmit} className="mt-4 flex flex-wrap items-end gap-2">
         {message && <p className="w-full text-sm text-danger-text">{message}</p>}

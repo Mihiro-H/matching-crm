@@ -101,10 +101,11 @@ export async function POST(request: NextRequest) {
     .eq("id", estimate.project_id)
     .maybeSingle();
 
-  await triggerNotification("contract_signed", {
-    company_name: project?.company?.name ?? "",
-    project_title: project?.title ?? "",
-  });
+  await triggerNotification(
+    "contract_signed",
+    { company_name: project?.company?.name ?? "", project_title: project?.title ?? "" },
+    { projectId: estimate.project_id }
+  );
 
   await logIntegrationEvent({
     integrationType: "cloudsign",

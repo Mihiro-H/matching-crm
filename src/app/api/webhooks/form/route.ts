@@ -74,9 +74,11 @@ export async function POST(request: NextRequest) {
     status: "success",
   });
 
-  await triggerNotification("new_lead", {
-    company_name: parsed.data.companyNameRaw ?? parsed.data.name,
-  });
+  await triggerNotification(
+    "new_lead",
+    { company_name: parsed.data.companyNameRaw ?? parsed.data.name },
+    { contactId: contact.id }
+  );
 
   return NextResponse.json({ id: contact.id }, { status: 201 });
 }

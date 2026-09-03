@@ -4,6 +4,7 @@ import { logIntegrationEvent } from "@/lib/integrations/log";
 import { triggerNotification } from "@/lib/slack/notify";
 import { parseFreeeEvent } from "@/lib/webhooks/parse-freee-event";
 import { verifySharedSecret } from "@/lib/webhooks/verify-signature";
+import { formatCurrencyJPY } from "@/lib/format";
 
 /**
  * freee Webhook(SCREEN_SPEC.md 7章): invoices.payment_statusを自動更新する。
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
   const admin = createSupabaseAdminClient();
   const { data: invoice, error: findError } = await admin
     .from("invoices")
-    .select("id, project:projects(title), company:companies(name)")
+    .select("id, project_id, amount, project:projects(title), company:companies(name)")
     .eq("freee_invoice_id", parsed.data.invoiceId)
     .maybeSingle();
 
@@ -69,10 +70,15 @@ export async function POST(request: NextRequest) {
     await admin.from("invoices").update(update).eq("id", invoice.id);
 
     if (parsed.data.status === "paid") {
-      await triggerNotification("payment_confirmed", {
-        company_name: invoice.company?.name ?? "",
-        project_title: invoice.project?.title ?? "",
-      });
+      await triggerNotification(
+        "payment_confirmed",
+        {
+          company_name: invoice.company?.name ?? "",
+          project_title: invoice.project?.title ?? "",
+          amount: formatCurrencyJPY(invoice.amount),
+        },
+        { projectId: invoice.project_id }
+      );
     }
   }
 

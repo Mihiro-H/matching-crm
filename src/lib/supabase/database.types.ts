@@ -61,6 +61,7 @@ export interface Database {
           role: UserRole;
           department_id: string | null;
           slack_user_id: string | null;
+          is_lead_distributor: boolean;
           created_at: string;
         };
         Insert: {
@@ -70,6 +71,7 @@ export interface Database {
           role: UserRole;
           department_id?: string | null;
           slack_user_id?: string | null;
+          is_lead_distributor?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
@@ -532,6 +534,35 @@ export interface Database {
           {
             foreignKeyName: "notification_settings_updated_by_fkey";
             columns: ["updated_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: NotificationEventType;
+          title: string;
+          link_path: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: NotificationEventType;
+          title: string;
+          link_path?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["notifications"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
             referencedRelation: "users";
             referencedColumns: ["id"];
           },

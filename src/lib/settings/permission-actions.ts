@@ -105,5 +105,25 @@ export async function createDepartment(name: string): Promise<MutationResult> {
   return { success: true };
 }
 
+/**
+ * 「新規問い合わせ」通知(ヘッダーのベル)の宛先となる、案件振り分け担当者の指定を切り替える
+ * (notify.ts: resolveNotificationRecipients参照)。
+ */
+export async function setLeadDistributor(userId: string, isLeadDistributor: boolean): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("users")
+    .update({ is_lead_distributor: isLeadDistributor })
+    .eq("id", userId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
 // PagePermission は saveUserPermissions 等の呼び出し元で型注釈に使う
 export type { PagePermission };

@@ -5,7 +5,12 @@ import type { PagePermission } from "@/lib/supabase/database.types";
 import { PERMISSION_PAGE_KEYS } from "./permission-pages";
 
 export type Department = { id: string; name: string };
-export type UserOption = { id: string; name: string; departmentId: string | null };
+export type UserOption = {
+  id: string;
+  name: string;
+  departmentId: string | null;
+  isLeadDistributor: boolean;
+};
 
 export async function getDepartments(): Promise<Department[]> {
   const supabase = await createSupabaseServerClient();
@@ -16,9 +21,17 @@ export async function getDepartments(): Promise<Department[]> {
 
 export async function getUsers(): Promise<UserOption[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.from("users").select("id, name, department_id").order("name");
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, name, department_id, is_lead_distributor")
+    .order("name");
   if (error) return [];
-  return (data ?? []).map((row) => ({ id: row.id, name: row.name, departmentId: row.department_id }));
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    departmentId: row.department_id,
+    isLeadDistributor: row.is_lead_distributor,
+  }));
 }
 
 /** 未設定のページ・ユーザーのデフォルト権限はview(DB_SCHEMA.md確定事項) */
