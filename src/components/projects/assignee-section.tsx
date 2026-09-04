@@ -17,6 +17,7 @@ export function AssigneeSection({
   canEdit: boolean;
 }) {
   const [assignees, setAssignees] = useState(initialAssignees);
+  const [isEditing, setIsEditing] = useState(false);
   const [modal, setModal] = useState<"primary" | "secondary" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,7 +75,18 @@ export function AssigneeSection({
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
-      <h3 className="text-md text-neutral-900">担当者</h3>
+      <div className="flex items-center justify-between">
+        <h3 className="text-md text-neutral-900">担当者</h3>
+        {canEdit && (
+          <button
+            type="button"
+            onClick={() => setIsEditing((v) => !v)}
+            className="rounded-md border border-neutral-200 px-3 py-1.5 text-sm text-neutral-600 hover:bg-page-bg"
+          >
+            {isEditing ? "完了" : "編集"}
+          </button>
+        )}
+      </div>
       {error && <p className="mt-2 text-sm text-danger-text">{error}</p>}
 
       <div className="mt-3 flex flex-col gap-3">
@@ -84,12 +96,12 @@ export function AssigneeSection({
             {primary ? (
               <AssigneeChip
                 name={primary.name}
-                onRemove={canEdit ? () => handleRemove(primary.id) : undefined}
+                onRemove={isEditing ? () => handleRemove(primary.id) : undefined}
               />
             ) : (
               <span className="text-sm text-neutral-600">未アサイン</span>
             )}
-            {canEdit && (
+            {isEditing && (
               <button
                 type="button"
                 onClick={() => setModal("primary")}
@@ -108,10 +120,13 @@ export function AssigneeSection({
               <AssigneeChip
                 key={a.id}
                 name={a.name}
-                onRemove={canEdit ? () => handleRemove(a.id) : undefined}
+                onRemove={isEditing ? () => handleRemove(a.id) : undefined}
               />
             ))}
-            {canEdit && (
+            {secondaries.length === 0 && !isEditing && (
+              <span className="text-sm text-neutral-600">未アサイン</span>
+            )}
+            {isEditing && (
               <button
                 type="button"
                 onClick={() => setModal("secondary")}

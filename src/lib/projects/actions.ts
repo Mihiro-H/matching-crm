@@ -46,6 +46,68 @@ export async function updateProjectStatus(
 export type MutationResult = { success: true } | { success: false; error: string };
 
 /**
+ * 案件詳細ヘッダーの基本項目編集(案件名/予算/納期/ステータス)。
+ * `contracted`への変更はupdateProjectStatusと同様にクラウドサインWebhook専用のため
+ * ここでも拒否する(手動フォームを経由しても迂回できないようにする)。ただし既に
+ * contractedの案件で他の項目だけ編集する場合(ステータス自体は変えない)は許可する。
+ */
+export async function updateProjectDetails(
+  projectId: string,
+  input: {
+    title: string;
+    budget: number | null;
+    startDate: string | null;
+    endDate: string | null;
+    status: ProjectStatus;
+  }
+): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  if (!input.title.trim()) {
+    return { success: false, error: "案件名を入力してください。" };
+  }
+  if (input.startDate && input.endDate && input.startDate > input.endDate) {
+    return { success: false, error: "開始日は終了日より前の日付にしてください。" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: current, error: fetchError } = await supabase
+    .from("projects")
+    .select("status")
+    .eq("id", projectId)
+    .maybeSingle();
+  if (fetchError) return { success: false, error: fetchError.message };
+  if (!current) return { success: false, error: "案件が見つかりません。" };
+
+  const statusChanged = current.status !== input.status;
+  if (statusChanged && !isManualDropAllowed(input.status)) {
+    return {
+      success: false,
+      error: "「契約済」への変更はクラウドサイン連携によって自動的に行われます。手動では変更できません。",
+    };
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      title: input.title.trim(),
+      budget: input.budget,
+      start_date: input.startDate,
+      end_date: input.endDate,
+      status: input.status,
+    })
+    .eq("id", projectId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/projects");
+  return { success: true };
+}
+
+/**
  * 主担当を変更する(SCREEN_SPEC.md 4章「担当者セクション」)。
  * 既存の主担当がいれば「サブ担当」に降格し、新しい担当者を主担当にする
  * (project_assigneesは(project_id, user_id)がユニークのため、
@@ -137,26 +199,35 @@ export async function removeAssignee(
   return { success: true };
 }
 
-/** 「+職種を追加」(SCREEN_SPEC.md 4章「職種枠セクション」) */
+export type AddProjectRoleResult = { success: true; id: string } | { success: false; error: string };
+
+/**
+ * 「+職種を追加」(SCREEN_SPEC.md 4章「職種枠セクション」)。
+ * 実際にDBで採番されたidを返す(呼び出し元がcrypto.randomUUID()等のダミーIDで
+ * ローカル状態を作ると、リロード前に続けてフリーランスをアサインした際、
+ * 存在しないIDでproject_role_assignmentsへ書き込もうとして外部キー制約違反になるため)。
+ */
 export async function addProjectRole(
   projectId: string,
   jobCategory: JobCategory,
   headcount: number
-): Promise<MutationResult> {
+): Promise<AddProjectRoleResult> {
   const authCheck = await requireEditAccess("projects");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("project_roles")
-    .insert({ project_id: projectId, job_category: jobCategory, headcount });
+    .insert({ project_id: projectId, job_category: jobCategory, headcount })
+    .select("id")
+    .single();
 
   if (error) {
     return { success: false, error: error.message };
   }
 
   revalidatePath(`/projects/${projectId}`);
-  return { success: true };
+  return { success: true, id: data.id };
 }
 
 /** 職種枠を削除する(紐づくフリーランスアサインもDBのON DELETE CASCADEで一緒に削除される) */
@@ -183,30 +254,45 @@ export async function removeProjectRole(
  * DB_SCHEMA.md: 重複アサイン(同一フリーランスが複数枠/複数案件)は許容するため
  * ユニーク制約はなく、ここでは素直にinsertするのみ(同一枠内の重複除外はUI側で行う)。
  */
+export type AssignFreelancersResult =
+  | { success: true; assignments: { id: string; freelancerId: string }[] }
+  | { success: false; error: string };
+
+/**
+ * 実際にDBで採番されたidを(freelancer_idと対にして)返す。addProjectRoleと同じ理由で、
+ * 呼び出し元がダミーIDでローカル状態を作ると、リロード前に続けてアサイン解除しようとした際
+ * 外部キー制約違反になるため。
+ */
 export async function assignFreelancersToRole(
   projectId: string,
   roleId: string,
   freelancerIds: string[]
-): Promise<MutationResult> {
+): Promise<AssignFreelancersResult> {
   const authCheck = await requireEditAccess("projects");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
 
   const supabase = await createSupabaseServerClient();
   const today = new Date().toISOString().slice(0, 10);
-  const { error } = await supabase.from("project_role_assignments").insert(
-    freelancerIds.map((freelancerId) => ({
-      project_role_id: roleId,
-      freelancer_id: freelancerId,
-      assigned_at: today,
-    }))
-  );
+  const { data, error } = await supabase
+    .from("project_role_assignments")
+    .insert(
+      freelancerIds.map((freelancerId) => ({
+        project_role_id: roleId,
+        freelancer_id: freelancerId,
+        assigned_at: today,
+      }))
+    )
+    .select("id, freelancer_id");
 
   if (error) {
     return { success: false, error: error.message };
   }
 
   revalidatePath(`/projects/${projectId}`);
-  return { success: true };
+  return {
+    success: true,
+    assignments: (data ?? []).map((row) => ({ id: row.id, freelancerId: row.freelancer_id })),
+  };
 }
 
 /** フリーランスアサインを解除する */

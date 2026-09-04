@@ -17,6 +17,8 @@ export type CompaniesListParams = {
   sortBy: CompanySortColumn;
   sortDir: SortDirection;
   statusFilter: CompanyStatus | null;
+  nameFilter: string | null;
+  assigneeFilter: { id: string; name: string } | null;
 };
 
 /**
@@ -27,6 +29,9 @@ export function parseCompaniesListParams(params: {
   sort?: string;
   dir?: string;
   status?: string;
+  name?: string;
+  assigneeId?: string;
+  assigneeName?: string;
 }): CompaniesListParams {
   const sortBy = COMPANY_SORTABLE_COLUMNS.includes(params.sort as CompanySortColumn)
     ? (params.sort as CompanySortColumn)
@@ -38,7 +43,13 @@ export function parseCompaniesListParams(params: {
     ? (params.status as CompanyStatus)
     : null;
 
-  return { sortBy, sortDir, statusFilter };
+  const nameFilter = params.name?.trim() || null;
+  const assigneeFilter =
+    params.assigneeId?.trim() && params.assigneeName?.trim()
+      ? { id: params.assigneeId.trim(), name: params.assigneeName.trim() }
+      : null;
+
+  return { sortBy, sortDir, statusFilter, nameFilter, assigneeFilter };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

@@ -4,7 +4,7 @@ import { PROJECT_STATUS_ORDER } from "./status-transitions";
 export const PROJECT_VIEWS = ["table", "kanban"] as const;
 export type ProjectView = (typeof PROJECT_VIEWS)[number];
 
-export const PROJECT_SORTABLE_COLUMNS = ["company", "title", "status", "assignee", "deadline"] as const;
+export const PROJECT_SORTABLE_COLUMNS = ["company", "title", "status", "assignee", "endDate"] as const;
 export type ProjectSortColumn = (typeof PROJECT_SORTABLE_COLUMNS)[number];
 export type SortDirection = "asc" | "desc";
 
@@ -13,6 +13,9 @@ export type ProjectsListParams = {
   sortBy: ProjectSortColumn;
   sortDir: SortDirection;
   statusFilter: ProjectStatus | null;
+  companyNameFilter: string | null;
+  titleFilter: string | null;
+  assigneeFilter: { id: string; name: string } | null;
 };
 
 /**
@@ -24,6 +27,10 @@ export function parseProjectsListParams(params: {
   sort?: string;
   dir?: string;
   status?: string;
+  companyName?: string;
+  title?: string;
+  assigneeId?: string;
+  assigneeName?: string;
 }): ProjectsListParams {
   const view = PROJECT_VIEWS.includes(params.view as ProjectView)
     ? (params.view as ProjectView)
@@ -31,7 +38,7 @@ export function parseProjectsListParams(params: {
 
   const sortBy = PROJECT_SORTABLE_COLUMNS.includes(params.sort as ProjectSortColumn)
     ? (params.sort as ProjectSortColumn)
-    : "deadline";
+    : "endDate";
 
   const sortDir: SortDirection = params.dir === "desc" ? "desc" : "asc";
 
@@ -39,7 +46,14 @@ export function parseProjectsListParams(params: {
     ? (params.status as ProjectStatus)
     : null;
 
-  return { view, sortBy, sortDir, statusFilter };
+  const companyNameFilter = params.companyName?.trim() || null;
+  const titleFilter = params.title?.trim() || null;
+  const assigneeFilter =
+    params.assigneeId?.trim() && params.assigneeName?.trim()
+      ? { id: params.assigneeId.trim(), name: params.assigneeName.trim() }
+      : null;
+
+  return { view, sortBy, sortDir, statusFilter, companyNameFilter, titleFilter, assigneeFilter };
 }
 
 export function nextSortDirection(

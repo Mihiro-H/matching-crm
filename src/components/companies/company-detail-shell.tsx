@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
+import { CompanyInfoSection } from "./company-info-section";
+import type { Company } from "@/lib/companies/get-company";
 
 const TABS = [
   { key: "projects", label: "案件" },
@@ -13,22 +15,26 @@ const TABS = [
 
 export function CompanyDetailShell({
   companyId,
-  companyName,
+  company,
+  canEdit,
   children,
 }: {
   companyId: string;
-  companyName: string;
+  company: Company;
+  canEdit: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
 
   usePageBreadcrumbs([
     { label: "企業一覧", href: "/companies" },
-    { label: companyName },
+    { label: company.name },
   ]);
 
   return (
     <div className="flex flex-col gap-4">
+      <CompanyInfoSection company={company} canEdit={canEdit} />
+
       <nav className="flex gap-1 border-b border-neutral-100">
         {TABS.map((tab) => {
           const href = `/companies/${companyId}/${tab.key}`;

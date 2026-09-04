@@ -39,10 +39,13 @@ export default async function CompanyProjectsTab({
                 <dd className="inline">{formatCurrencyJPY(project.budget)}</dd>
               </div>
             )}
-            {project.deadline && (
+            {(project.start_date || project.end_date) && (
               <div>
-                <dt className="inline">納期: </dt>
-                <dd className="inline">{formatDateJa(project.deadline)}</dd>
+                <dt className="inline">期間: </dt>
+                <dd className="inline">
+                  {project.start_date ? formatDateJa(project.start_date) : "-"} 〜{" "}
+                  {project.end_date ? formatDateJa(project.end_date) : "-"}
+                </dd>
               </div>
             )}
           </dl>

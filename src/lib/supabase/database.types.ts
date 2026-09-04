@@ -206,7 +206,8 @@ export interface Database {
           contact_id: string | null;
           title: string;
           budget: number | null;
-          deadline: string | null;
+          start_date: string | null;
+          end_date: string | null;
           status: ProjectStatus;
           created_at: string;
           updated_at: string;
@@ -217,7 +218,8 @@ export interface Database {
           contact_id?: string | null;
           title: string;
           budget?: number | null;
-          deadline?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
           status: ProjectStatus;
           created_at?: string;
           updated_at?: string;
@@ -797,7 +799,8 @@ export interface Database {
         };
         Relationships: [];
       };
-      // supabase/migrations/20260902042407_project_list_view.sql
+      // supabase/migrations/20260902042407_project_list_view.sql, updated by
+      // supabase/migrations/20260906080000_project_date_range.sql
       project_list_view: {
         Row: {
           id: string;
@@ -806,12 +809,47 @@ export interface Database {
           title: string;
           status: ProjectStatus;
           budget: number | null;
-          deadline: string | null;
+          start_date: string | null;
+          end_date: string | null;
           created_at: string;
           updated_at: string;
           assignee_id: string | null;
           assignee_name: string | null;
           role_summary: { job_category: JobCategory; headcount: number }[];
+        };
+        Relationships: [];
+      };
+      // supabase/migrations/20260905070000_contact_list_view.sql
+      contact_list_view: {
+        Row: {
+          id: string;
+          company_id: string | null;
+          company_name: string | null;
+          name: string;
+          email: string | null;
+          phone: string | null;
+          source: string;
+          job_categories: JobCategory[];
+          status: ContactStatus;
+          assigned_user_id: string | null;
+          assignee_name: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Relationships: [];
+      };
+      // supabase/migrations/20260905090000_freelancer_list_view.sql
+      freelancer_list_view: {
+        Row: {
+          id: string;
+          platform_freelancer_id: string;
+          name: string;
+          email: string | null;
+          job_categories: JobCategory[] | null;
+          last_imported_at: string | null;
+          created_at: string;
+          updated_at: string;
+          active_project_count: number;
         };
         Relationships: [];
       };

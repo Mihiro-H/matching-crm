@@ -8,6 +8,8 @@ import {
 } from "@/lib/companies/list-params";
 import { COMPANY_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { searchUsers } from "@/lib/search-select/actions";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import type { CompanyStatus } from "@/lib/supabase/database.types";
@@ -31,7 +33,14 @@ const STATUS_FILTER_CHIPS: { label: string; value: CompanyStatus | null }[] = [
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sort?: string; dir?: string; status?: string }>;
+  searchParams: Promise<{
+    sort?: string;
+    dir?: string;
+    status?: string;
+    name?: string;
+    assigneeId?: string;
+    assigneeName?: string;
+  }>;
 }) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
@@ -43,16 +52,41 @@ export default async function CompaniesPage({
   const params = parseCompaniesListParams(resolvedParams);
   const { companies, error } = await getCompanies(params);
 
-  function hrefFor(overrides: { sort?: CompanySortColumn; status?: CompanyStatus | null }) {
+  function hrefFor(overrides: {
+    sort?: CompanySortColumn;
+    status?: CompanyStatus | null;
+    name?: string | null;
+    assigneeId?: string | null;
+    assigneeName?: string | null;
+  }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
-    next.set(
-      "dir",
-      overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir
-    );
+    next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
+
     const status = "status" in overrides ? overrides.status : params.statusFilter;
     if (status) next.set("status", status);
+
+    const name = "name" in overrides ? overrides.name : params.nameFilter;
+    if (name) next.set("name", name);
+
+    const assigneeId = "assigneeId" in overrides ? overrides.assigneeId : params.assigneeFilter?.id;
+    const assigneeName = "assigneeId" in overrides ? overrides.assigneeName : params.assigneeFilter?.name;
+    if (assigneeId && assigneeName) {
+      next.set("assigneeId", assigneeId);
+      next.set("assigneeName", assigneeName);
+    }
+
     return `/companies?${next.toString()}`;
+  }
+
+  // SortFilterHeaderはクライアントコンポーネントのため、関数(hrefFor)ではなく
+  // 素のデータだけを渡す("use server"以外の関数はクライアントへ渡せないため)。
+  const currentQuery: Record<string, string> = { sort: params.sortBy, dir: params.sortDir };
+  if (params.statusFilter) currentQuery.status = params.statusFilter;
+  if (params.nameFilter) currentQuery.name = params.nameFilter;
+  if (params.assigneeFilter) {
+    currentQuery.assigneeId = params.assigneeFilter.id;
+    currentQuery.assigneeName = params.assigneeFilter.name;
   }
 
   return (
@@ -87,12 +121,29 @@ export default async function CompaniesPage({
           <thead>
             <tr className="border-b border-neutral-100">
               {COMPANY_SORTABLE_COLUMNS.map((column) => (
-                <th key={column} className="px-4 py-3 font-medium text-neutral-600">
-                  <Link href={hrefFor({ sort: column })} className="hover:text-primary-600">
-                    {COLUMN_LABELS[column]}
-                    {params.sortBy === column && (params.sortDir === "asc" ? " ▲" : " ▼")}
-                  </Link>
-                </th>
+                <SortFilterHeader
+                  key={column}
+                  label={COLUMN_LABELS[column]}
+                  sortHref={hrefFor({ sort: column })}
+                  isSorted={params.sortBy === column}
+                  sortDir={params.sortDir}
+                  basePath="/companies"
+                  currentQuery={currentQuery}
+                  filter={
+                    column === "name"
+                      ? { type: "text", value: params.nameFilter, placeholder: "企業名で検索", paramName: "name" }
+                      : column === "assignee"
+                        ? {
+                            type: "person",
+                            value: params.assigneeFilter,
+                            modalTitle: "担当者で絞り込み",
+                            search: searchUsers,
+                            idParamName: "assigneeId",
+                            nameParamName: "assigneeName",
+                          }
+                        : undefined
+                  }
+                />
               ))}
             </tr>
           </thead>

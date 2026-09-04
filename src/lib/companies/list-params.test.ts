@@ -2,11 +2,13 @@ import { describe, expect, test } from "vitest";
 import { nextSortDirection, parseCompaniesListParams } from "./list-params";
 
 describe("parseCompaniesListParams", () => {
-  test("defaults to sorting by name ascending with no status filter", () => {
+  test("defaults to sorting by name ascending with no filters", () => {
     expect(parseCompaniesListParams({})).toEqual({
       sortBy: "name",
       sortDir: "asc",
       statusFilter: null,
+      nameFilter: null,
+      assigneeFilter: null,
     });
   });
 
@@ -15,6 +17,8 @@ describe("parseCompaniesListParams", () => {
       sortBy: "status",
       sortDir: "desc",
       statusFilter: null,
+      nameFilter: null,
+      assigneeFilter: null,
     });
   });
 
@@ -40,6 +44,17 @@ describe("parseCompaniesListParams", () => {
     expect(parseCompaniesListParams({ status: "not_a_status" })).toMatchObject({
       statusFilter: null,
     });
+  });
+
+  test("accepts a company name text filter", () => {
+    expect(parseCompaniesListParams({ name: "テスト" })).toMatchObject({ nameFilter: "テスト" });
+  });
+
+  test("accepts an assignee filter only when both id and name are present", () => {
+    expect(parseCompaniesListParams({ assigneeId: "u1", assigneeName: "田中太郎" })).toMatchObject({
+      assigneeFilter: { id: "u1", name: "田中太郎" },
+    });
+    expect(parseCompaniesListParams({ assigneeId: "u1" })).toMatchObject({ assigneeFilter: null });
   });
 });
 

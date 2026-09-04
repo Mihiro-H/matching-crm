@@ -3,10 +3,51 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireEditAccess } from "@/lib/auth/require-edit";
-import type { ContactStatus } from "@/lib/supabase/database.types";
+import type { ContactStatus, JobCategory } from "@/lib/supabase/database.types";
 import { getNextStatusOptions } from "./status";
 
 export type MutationResult = { success: true } | { success: false; error: string };
+
+/**
+ * 商談・担当者の基本項目編集(氏名/メール/電話/依頼職種/問い合わせ内容)。
+ * ステータス(new/in_progress/...)はwon/lost判定など専用ロジックが絡むため、
+ * このアクションでは扱わない(advanceContactStatus/markContactWon/markContactLostを使う)。
+ */
+export async function updateContactDetails(
+  contactId: string,
+  input: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    jobCategories: JobCategory[];
+    inquiryBody: string | null;
+  }
+): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("contacts");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  if (!input.name.trim()) {
+    return { success: false, error: "氏名を入力してください。" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase
+    .from("contacts")
+    .update({
+      name: input.name.trim(),
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      job_categories: input.jobCategories,
+      inquiry_body: input.inquiryBody?.trim() || null,
+    })
+    .eq("id", contactId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/contacts/${contactId}`);
+  revalidatePath("/contacts");
+  return { success: true };
+}
 
 /**
  * new→in_progress、in_progress→negotiating など、

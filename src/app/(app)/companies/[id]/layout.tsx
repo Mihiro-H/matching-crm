@@ -21,7 +21,7 @@ export default async function CompanyDetailLayout({
     return <SupabaseNotConfiguredNotice />;
   }
 
-  await requirePageAccess("companies");
+  const { canEdit } = await requirePageAccess("companies");
 
   const company = await getCompanyById(id);
   if (!company) {
@@ -29,7 +29,7 @@ export default async function CompanyDetailLayout({
   }
 
   return (
-    <CompanyDetailShell companyId={id} companyName={company.name}>
+    <CompanyDetailShell companyId={id} company={company} canEdit={canEdit}>
       {children}
     </CompanyDetailShell>
   );

@@ -40,7 +40,7 @@ export function JobRolesSection({
     }
     setRoles((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), jobCategory: newCategory, headcount: newHeadcount, assignments: [] },
+      { id: result.id, jobCategory: newCategory, headcount: newHeadcount, assignments: [] },
     ]);
     setNewHeadcount(1);
   }
@@ -66,6 +66,7 @@ export function JobRolesSection({
       setError(result.error);
       return;
     }
+    const nameByFreelancerId = new Map(items.map((i) => [i.id, i.label]));
     setRoles((prev) =>
       prev.map((role) =>
         role.id === roleId
@@ -73,7 +74,11 @@ export function JobRolesSection({
               ...role,
               assignments: [
                 ...role.assignments,
-                ...items.map((i) => ({ id: crypto.randomUUID(), freelancerId: i.id, freelancerName: i.label })),
+                ...result.assignments.map((a) => ({
+                  id: a.id,
+                  freelancerId: a.freelancerId,
+                  freelancerName: nameByFreelancerId.get(a.freelancerId) ?? "",
+                })),
               ],
             }
           : role

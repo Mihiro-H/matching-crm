@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { getContacts } from "@/lib/contacts/get-contacts";
-import { CONTACT_STATUS_META } from "@/lib/status-badges";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { JOB_CATEGORY_LABELS } from "@/lib/job-categories";
-import { formatElapsedTime } from "@/lib/elapsed-time";
+import { parseContactsListParams } from "@/lib/contacts/list-params";
+import { ContactsTable } from "@/components/contacts/contacts-table";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import type { ContactStatus } from "@/lib/supabase/database.types";
@@ -19,7 +17,15 @@ const STATUS_FILTER_CHIPS: { label: string; value: ContactStatus | null }[] = [
 export default async function ContactsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{
+    sort?: string;
+    dir?: string;
+    status?: string;
+    companyName?: string;
+    name?: string;
+    assigneeId?: string;
+    assigneeName?: string;
+  }>;
 }) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
@@ -27,19 +33,26 @@ export default async function ContactsPage({
 
   await requirePageAccess("contacts");
 
-  const { status } = await searchParams;
-  const statusFilter = STATUS_FILTER_CHIPS.some((chip) => chip.value === status)
-    ? (status as ContactStatus)
-    : null;
-
-  const { contacts, error } = await getContacts(statusFilter);
+  const resolvedParams = await searchParams;
+  const params = parseContactsListParams(resolvedParams);
+  const { contacts, error } = await getContacts(params);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-2">
         {STATUS_FILTER_CHIPS.map((chip) => {
-          const isActive = statusFilter === chip.value;
-          const href = chip.value ? `/contacts?status=${chip.value}` : "/contacts";
+          const isActive = params.statusFilter === chip.value;
+          const next = new URLSearchParams();
+          next.set("sort", params.sortBy);
+          next.set("dir", params.sortDir);
+          if (chip.value) next.set("status", chip.value);
+          if (params.companyNameFilter) next.set("companyName", params.companyNameFilter);
+          if (params.nameFilter) next.set("name", params.nameFilter);
+          if (params.assigneeFilter) {
+            next.set("assigneeId", params.assigneeFilter.id);
+            next.set("assigneeName", params.assigneeFilter.name);
+          }
+          const href = `/contacts?${next.toString()}`;
           return (
             <Link
               key={chip.label}
@@ -62,53 +75,10 @@ export default async function ContactsPage({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
-        {contacts.map((contact) => (
-          <Link
-            key={contact.id}
-            href={`/contacts/${contact.id}`}
-            className="rounded-lg border border-neutral-200 bg-neutral-0 p-4 hover:border-primary-500"
-          >
-            <div className="flex items-start justify-between">
-              <h3 className="text-md text-neutral-900">{contact.companyName}</h3>
-              <StatusBadge meta={CONTACT_STATUS_META[contact.status]} />
-            </div>
-            <p className="mt-1 text-xs text-neutral-600">
-              {SOURCE_LABELS[contact.source] ?? contact.source} ・ {formatElapsedTime(contact.createdAt)}
-            </p>
-            {contact.jobCategories.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {contact.jobCategories.map((category) => (
-                  <span
-                    key={category}
-                    className="rounded-sm bg-page-bg px-2 py-0.5 text-xs text-neutral-600"
-                  >
-                    {JOB_CATEGORY_LABELS[category]}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="mt-2 text-xs text-neutral-600">
-              担当者: {contact.assigneeName ?? "未アサイン"}
-            </p>
-          </Link>
-        ))}
-
-        {contacts.length === 0 && !error && (
-          <p className="col-span-3 py-8 text-center text-sm text-neutral-600">
-            該当する商談・問い合わせはありません。
-          </p>
-        )}
-      </div>
+      {!error && <ContactsTable contacts={contacts} params={params} />}
     </div>
   );
 }
-
-const SOURCE_LABELS: Record<string, string> = {
-  form: "フォーム",
-  referral: "紹介",
-  other: "その他",
-};
 
 function SupabaseNotConfiguredNotice() {
   return (

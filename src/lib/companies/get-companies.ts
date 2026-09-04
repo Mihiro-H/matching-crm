@@ -21,6 +21,7 @@ const SORT_COLUMN_MAP: Record<CompaniesListParams["sortBy"], string> = {
 /**
  * 企業一覧(SCREEN_SPEC.md 3章)のテーブル表示用データを取得する。
  * 「直近の案件」「担当者」列は company_list_view (migration参照) で解決する。
+ * 列見出しクリックの絞り込み(企業名テキスト検索/担当者モーダル選択)にも対応する。
  */
 export async function getCompanies(
   params: CompaniesListParams
@@ -34,6 +35,12 @@ export async function getCompanies(
 
   if (params.statusFilter) {
     query = query.eq("status", params.statusFilter);
+  }
+  if (params.nameFilter) {
+    query = query.ilike("name", `%${params.nameFilter}%`);
+  }
+  if (params.assigneeFilter) {
+    query = query.eq("assignee_id", params.assigneeFilter.id);
   }
 
   const { data, error } = await query;
