@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -11,10 +12,16 @@ export type CreateUserResult = { success: true } | { success: false; error: stri
 /**
  * 「ユーザー管理」での新規ユーザー登録(SCREEN_SPEC.md 10章 9-2)。
  *
- * public.users.id は auth.users.id への外部キーのため、本人が一度も
- * Googleログインを試みていない間は行を作成できない。そのため、まず
- * service role権限でauth.usersをメールアドレス検索し、見つかった場合のみ
- * その auth.users.id で public.users を作成する。
+ * public.users.id は auth.users.id への外部キーのため、行を作るにはauth.users側の
+ * IDが先に必要。以前は「本人が一度もGoogleログインを試みていない間は登録できない」
+ * 運用だったが、Supabase Authの自動アイデンティティリンク(同一メールアドレスの
+ * サインインを既存ユーザーへ自動統合する挙動、実機で1つに統合されることを確認済み)
+ * を利用し、次の2段構えに変更した。
+ *   1. まずservice role権限でauth.usersをメールアドレス検索する
+ *      (本人が既に一度でもログインを試みていれば、その行をそのまま使う)
+ *   2. 見つからなければ inviteUserByEmail で auth.users行を新規作成し、招待メールを送る。
+ *      本人が後から「Googleでログイン」を行うと、同じメールアドレスのアカウントとして
+ *      自動的にこのauth.users行へ統合される。
  *
  * (Admin APIにメール完全一致検索のメソッドがないため、一覧を取得してJS側で
  * フィルタする。社内ツール規模のユーザー数を前提とした実装)
@@ -62,11 +69,16 @@ export async function createUserFromExistingAuthAccount(input: {
   }
 
   if (!authUserId) {
-    return {
-      success: false,
-      error:
-        "このメールアドレスでのログイン試行がまだありません。本人に一度「Googleでログイン」を試してもらってから登録してください。",
-    };
+    const headerList = await headers();
+    const origin = headerList.get("origin") ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+    const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+      redirectTo: `${origin}/login`,
+    });
+    if (inviteError) {
+      return { success: false, error: `招待メールの送信に失敗しました: ${inviteError.message}` };
+    }
+    authUserId = invited.user.id;
   }
 
   const supabase = await createSupabaseServerClient();

@@ -153,7 +153,7 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
         </button>
       </form>
       <p className="mt-2 text-xs text-neutral-400">
-        本人が一度も「Googleでログイン」を試みていない場合は登録できません(先に一度ログインを試してもらってください)。
+        登録すると、本人がまだ一度もログインしていない場合は招待メールが送信されます。既に一度でも「Googleでログイン」を試したことがある場合は、招待メールなしでそのまま登録されます。
       </p>
     </div>
   );
