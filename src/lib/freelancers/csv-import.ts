@@ -1,4 +1,4 @@
-import { JOB_CATEGORIES } from "@/lib/job-categories";
+import { JOB_CATEGORIES, JOB_CATEGORY_LABELS } from "@/lib/job-categories";
 import type { JobCategory } from "@/lib/supabase/database.types";
 
 export type FreelancerCsvRowData = {
@@ -12,7 +12,17 @@ export type ParseFreelancerCsvRowResult =
   | { ok: true; data: FreelancerCsvRowData }
   | { ok: false; error: string };
 
-const VALID_CATEGORIES = new Set<string>(JOB_CATEGORIES);
+/**
+ * job_categoriesの値として受け付けるキー。DB上のキー(writer等)に加え、
+ * 提携先プラットフォームからのCSVエクスポートは日本語ラベルで来ることがあるため、
+ * このアプリ自身の表示ラベル(JOB_CATEGORY_LABELS)と、それとは別の一般的な同義語
+ * (フォトグラファー職を指す「カメラマン」等)も受け付ける。
+ */
+const CATEGORY_ALIASES: Record<string, JobCategory> = {
+  ...Object.fromEntries(JOB_CATEGORIES.map((c) => [c, c])),
+  ...Object.fromEntries(JOB_CATEGORIES.map((c) => [JOB_CATEGORY_LABELS[c], c])),
+  カメラマン: "photographer",
+};
 
 /**
  * フリーランスCSVインポート(SCREEN_SPEC.md 9章 / DB_SCHEMA.md csv_imports)の1行を
@@ -35,11 +45,11 @@ export function parseFreelancerCsvRow(row: Record<string, string | undefined>): 
   let jobCategories: JobCategory[] | null = null;
   if (rawCategories) {
     const parts = rawCategories.split(",").map((c) => c.trim());
-    const invalid = parts.find((c) => !VALID_CATEGORIES.has(c));
+    const invalid = parts.find((c) => !(c in CATEGORY_ALIASES));
     if (invalid) {
       return { ok: false, error: `job_categoriesに不正な値があります: ${invalid}` };
     }
-    jobCategories = parts as JobCategory[];
+    jobCategories = parts.map((c) => CATEGORY_ALIASES[c]);
   }
 
   return {
