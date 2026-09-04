@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getMeetingNoteById } from "@/lib/meeting-notes/get-meeting-note";
 import { formatDateJa } from "@/lib/format";
 import { ActionItemsChecklist } from "@/components/meeting-notes/action-items-checklist";
+import { LinkProjectSection } from "@/components/meeting-notes/link-project-section";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
@@ -24,6 +25,14 @@ export default async function MeetingNoteDetailPage({
 
   return (
     <div className="flex flex-col gap-4">
+      {canEdit && !note.projectId && note.companyId && (
+        <LinkProjectSection
+          meetingNoteId={note.id}
+          companyId={note.companyId}
+          companyName={note.companyName ?? "(企業不明)"}
+        />
+      )}
+
       <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
         <div className="flex items-start justify-between">
           <h2 className="text-lg text-neutral-900">{note.title}</h2>

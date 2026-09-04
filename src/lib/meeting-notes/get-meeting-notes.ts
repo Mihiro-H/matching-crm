@@ -21,12 +21,14 @@ export type MeetingNotesFilter = {
 
 /**
  * 議事録一覧(SCREEN_SPEC.md 6章)。
- * 企業名は project_id→projects.company_id→companies.name、または
- * contact_id→contacts.company_id→companies.name(なければcompany_name_raw)経由で解決する。
+ * 企業名は project_id→projects.company_id→companies.name、
+ * contact_id→contacts.company_id→companies.name(なければcompany_name_raw)、
+ * またはGoogle Drive取り込み時にフォルダ名から自動特定したcompany_id経由で解決する
+ * (upload由来でproject_id/contact_idがまだ無い議事録向け)。
  *
- * 企業名フィルターは2つの経路(project/contact)にまたがる集計値のため、
- * PostgRESTの単純なilikeでは直接絞り込めない。MVPの想定件数では
- * アプリケーション層でフィルタする方針とする(件数が増えたらDBビュー化を検討)。
+ * 企業名フィルターは複数の経路にまたがる集計値のため、PostgRESTの単純なilikeでは
+ * 直接絞り込めない。MVPの想定件数ではアプリケーション層でフィルタする方針とする
+ * (件数が増えたらDBビュー化を検討)。
  */
 export async function getMeetingNotes(
   filter: MeetingNotesFilter
@@ -36,7 +38,7 @@ export async function getMeetingNotes(
   let query = supabase
     .from("meeting_notes")
     .select(
-      "id, title, meeting_at, ai_summary, action_items, project_id, project:projects(company:companies(name)), contact:contacts(company_name_raw, company:companies(name))"
+      "id, title, meeting_at, ai_summary, action_items, project_id, project:projects(company:companies(name)), contact:contacts(company_name_raw, company:companies(name)), company:companies(name)"
     )
     .order("meeting_at", { ascending: false });
 
@@ -58,7 +60,11 @@ export async function getMeetingNotes(
 
   const notes = (data ?? []).map((row) => {
     const companyName =
-      row.project?.company?.name ?? row.contact?.company?.name ?? row.contact?.company_name_raw ?? "(企業不明)";
+      row.project?.company?.name ??
+      row.contact?.company?.name ??
+      row.contact?.company_name_raw ??
+      row.company?.name ??
+      "(企業不明)";
     const actionItems = parseActionItems(row.action_items);
 
     return {

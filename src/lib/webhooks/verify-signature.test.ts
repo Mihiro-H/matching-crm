@@ -1,10 +1,6 @@
 import { createHmac } from "node:crypto";
 import { describe, expect, test } from "vitest";
-import {
-  computeZoomChallengeResponse,
-  verifySharedSecret,
-  verifySlackSignature,
-} from "./verify-signature";
+import { verifySharedSecret, verifySlackSignature } from "./verify-signature";
 
 describe("verifySlackSignature", () => {
   const signingSecret = "test-signing-secret";
@@ -37,15 +33,6 @@ describe("verifySlackSignature", () => {
     const oldTimestamp = (Math.floor(Date.now() / 1000) - 6 * 60).toString();
     const signature = sign(signingSecret, oldTimestamp, rawBody);
     expect(verifySlackSignature(signingSecret, oldTimestamp, rawBody, signature)).toBe(false);
-  });
-});
-
-describe("computeZoomChallengeResponse", () => {
-  test("computes an HMAC-SHA256 hex digest of the plainToken using the secret token", () => {
-    const secretToken = "zoom-secret";
-    const plainToken = "abc123";
-    const expected = createHmac("sha256", secretToken).update(plainToken).digest("hex");
-    expect(computeZoomChallengeResponse(secretToken, plainToken)).toBe(expected);
   });
 });
 

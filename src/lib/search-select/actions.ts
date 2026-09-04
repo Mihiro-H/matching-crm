@@ -75,6 +75,29 @@ export async function searchProjects(query: string): Promise<SearchResultItem[]>
 }
 
 /**
+ * 企業を絞り込んだ案件選択(議事録の「案件を紐づける」: Drive取り込みで企業までは
+ * 自動特定済みのため、無関係な企業の案件を誤って選ばないよう絞り込む)。
+ */
+export async function searchProjectsByCompany(
+  companyId: string,
+  query: string
+): Promise<SearchResultItem[]> {
+  const supabase = await createSupabaseServerClient();
+  let request = supabase
+    .from("projects")
+    .select("id, title")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false })
+    .limit(SEARCH_LIMIT);
+  if (query.trim()) {
+    request = request.ilike("title", `%${query.trim()}%`);
+  }
+  const { data, error } = await request;
+  if (error) throw new Error(`案件の検索に失敗しました: ${error.message}`);
+  return (data ?? []).map((row) => ({ id: row.id, label: row.title, sublabel: null }));
+}
+
+/**
  * 企業選択モーダルからのインライン新規登録
  * (SCREEN_SPEC.md「企業選択モーダルの新規作成フロー」)。
  * 新規企業のstatusは「negotiating(商談中)」を初期値とする

@@ -8,13 +8,19 @@ export type MeetingNoteDetail = {
   transcriptUrl: string | null;
   aiSummary: string;
   actionItems: ActionItem[];
+  projectId: string | null;
+  /** Drive取り込み時にフォルダ名から自動特定した企業(project未紐付けの間、案件選択の絞り込みに使う) */
+  companyId: string | null;
+  companyName: string | null;
 };
 
 export async function getMeetingNoteById(id: string): Promise<MeetingNoteDetail | null> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("meeting_notes")
-    .select("id, title, meeting_at, transcript_url, ai_summary, action_items")
+    .select(
+      "id, title, meeting_at, transcript_url, ai_summary, action_items, project_id, company_id, company:companies(name)"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -30,5 +36,8 @@ export async function getMeetingNoteById(id: string): Promise<MeetingNoteDetail 
     transcriptUrl: data.transcript_url,
     aiSummary: data.ai_summary,
     actionItems: parseActionItems(data.action_items),
+    projectId: data.project_id,
+    companyId: data.company_id,
+    companyName: data.company?.name ?? null,
   };
 }

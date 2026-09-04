@@ -31,6 +31,7 @@ export type AssigneeRole = "primary" | "secondary";
 export type EstimateDocumentType = "estimate" | "order";
 export type ContractStatus = "draft" | "sent" | "signed" | "rejected";
 export type MeetingNoteSource = "zoom" | "upload" | "manual";
+export type DriveMeetingImportStatus = "submitted" | "completed" | "failed";
 export type PaymentStatus = "not_invoiced" | "invoiced" | "unpaid" | "paid";
 export type NotificationEventType =
   | "new_lead"
@@ -421,6 +422,7 @@ export interface Database {
           id: string;
           project_id: string | null;
           contact_id: string | null;
+          company_id: string | null;
           title: string;
           meeting_at: string;
           source: MeetingNoteSource;
@@ -434,6 +436,7 @@ export interface Database {
           id?: string;
           project_id?: string | null;
           contact_id?: string | null;
+          company_id?: string | null;
           title: string;
           meeting_at: string;
           source: MeetingNoteSource;
@@ -458,9 +461,58 @@ export interface Database {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "meeting_notes_company_id_fkey";
+            columns: ["company_id"];
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "meeting_notes_created_by_fkey";
             columns: ["created_by"];
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      drive_meeting_imports: {
+        Row: {
+          id: string;
+          drive_file_id: string;
+          drive_file_name: string;
+          drive_file_web_view_link: string | null;
+          matched_company_id: string | null;
+          assemblyai_transcript_id: string | null;
+          status: DriveMeetingImportStatus;
+          meeting_note_id: string | null;
+          error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          drive_file_id: string;
+          drive_file_name: string;
+          drive_file_web_view_link?: string | null;
+          matched_company_id?: string | null;
+          assemblyai_transcript_id?: string | null;
+          status: DriveMeetingImportStatus;
+          meeting_note_id?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["drive_meeting_imports"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "drive_meeting_imports_matched_company_id_fkey";
+            columns: ["matched_company_id"];
+            referencedRelation: "companies";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "drive_meeting_imports_meeting_note_id_fkey";
+            columns: ["meeting_note_id"];
+            referencedRelation: "meeting_notes";
             referencedColumns: ["id"];
           },
         ];

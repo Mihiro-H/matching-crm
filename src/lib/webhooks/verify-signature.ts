@@ -33,14 +33,6 @@ export function verifySlackSignature(
 }
 
 /**
- * Zoom Webhookの「URL Validation」チャレンジ応答(公式ドキュメントの標準手順)。
- * secretTokenでplainTokenをHMAC-SHA256したhexを encryptedToken として返す。
- */
-export function computeZoomChallengeResponse(secretToken: string, plainToken: string): string {
-  return createHmac("sha256", secretToken).update(plainToken).digest("hex");
-}
-
-/**
  * 単純な共有シークレット方式のWebhook認証(freee/クラウドサイン/フォーム等、
  * サービスごとの正確な署名方式が未確定なもの向けの暫定実装)。
  * ヘッダーやクエリパラメータで渡された値を、環境変数の値とtiming-safeに比較する。

@@ -10,7 +10,7 @@ import type {
 
 /**
  * Webhook受信ログ(DB_SCHEMA.md integration_logs)。
- * Webhook呼び出し元(freee/クラウドサイン/Slack/Zoom/フォーム)は
+ * Webhook呼び出し元(freee/クラウドサイン/Slack/フォーム)は
  * Supabase Authのセッションを持たないため、service role権限のadminクライアントで
  * 書き込む(RLSは「authenticated限定」のため、通常クライアントでは弾かれる)。
  */

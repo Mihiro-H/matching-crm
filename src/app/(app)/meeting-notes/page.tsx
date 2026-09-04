@@ -101,11 +101,18 @@ export default async function MeetingNotesPage({
               {note.companyName} ・ {formatDateJa(note.meetingAt)}
             </p>
             <p className="mt-2 text-sm text-neutral-600">{note.aiSummaryExcerpt}</p>
-            {note.pendingActionItemCount > 0 && (
-              <span className="mt-2 inline-block rounded-sm bg-warning-bg px-2 py-0.5 text-xs text-warning-text">
-                要タスク化 {note.pendingActionItemCount}件
-              </span>
-            )}
+            <div className="mt-2 flex flex-wrap gap-2">
+              {note.projectId === null && (
+                <span className="inline-block rounded-sm bg-warning-bg px-2 py-0.5 text-xs text-warning-text">
+                  案件未紐付け
+                </span>
+              )}
+              {note.pendingActionItemCount > 0 && (
+                <span className="inline-block rounded-sm bg-warning-bg px-2 py-0.5 text-xs text-warning-text">
+                  要タスク化 {note.pendingActionItemCount}件
+                </span>
+              )}
+            </div>
           </Link>
         ))}
 

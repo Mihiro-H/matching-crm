@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/run-reports",
-      "schedule": "0 * * * *"
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/import-meeting-recordings",
+      "schedule": "15 9 * * *"
     }
   ]
 }
