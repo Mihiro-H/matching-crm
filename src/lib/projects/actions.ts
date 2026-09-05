@@ -108,6 +108,25 @@ export async function updateProjectDetails(
 }
 
 /**
+ * 見積書・納品書・請求書作成画面で金額を修正した際、「案件ページの金額も変更しますか?」
+ * の確認後に呼ばれる、案件のbudgetだけを更新する軽量なアクション
+ * (updateProjectDetailsは案件名等の必須項目やステータス遷移ガードを伴うため、
+ * 金額単体の同期にはここだけを更新する専用アクションを設ける)。
+ */
+export async function updateProjectBudget(projectId: string, budget: number): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("projects").update({ budget }).eq("id", projectId);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/projects");
+  return { success: true };
+}
+
+/**
  * 主担当を変更する(SCREEN_SPEC.md 4章「担当者セクション」)。
  * 既存の主担当がいれば「サブ担当」に降格し、新しい担当者を主担当にする
  * (project_assigneesは(project_id, user_id)がユニークのため、

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateProjectDetails } from "@/lib/projects/actions";
 import { PROJECT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 import { PROJECT_STATUS_ORDER } from "@/lib/projects/status-transitions";
 import type { ProjectDetail } from "@/lib/projects/get-project";
@@ -16,6 +17,8 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 請求済案件の金額変更時、保存前に一度警告を挟むための保留状態
+  const [showInvoicedBudgetWarning, setShowInvoicedBudgetWarning] = useState(false);
 
   const [title, setTitle] = useState(project.title);
   const [budget, setBudget] = useState(project.budget !== null ? String(project.budget) : "");
@@ -39,7 +42,18 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
     setIsEditing(false);
   }
 
-  async function handleSave() {
+  function handleSave() {
+    const nextBudget = budget.trim() ? Number(budget) : null;
+    // 請求書発行済みの案件で金額が変わる場合は、誤操作で請求済の金額とズレないよう
+    // 一度警告を挟んでから保存する(SCREEN_SPEC.md 4章)。
+    if (project.hasInvoices && nextBudget !== project.budget) {
+      setShowInvoicedBudgetWarning(true);
+      return;
+    }
+    void submit();
+  }
+
+  async function submit() {
     setError(null);
     setIsSubmitting(true);
     const result = await updateProjectDetails(project.id, {
@@ -56,6 +70,15 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
     }
     setIsEditing(false);
     router.refresh();
+  }
+
+  function handleConfirmInvoicedBudgetWarning() {
+    setShowInvoicedBudgetWarning(false);
+    void submit();
+  }
+
+  function handleCancelInvoicedBudgetWarning() {
+    setShowInvoicedBudgetWarning(false);
   }
 
   if (!isEditing) {
@@ -176,6 +199,16 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
           キャンセル
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={showInvoicedBudgetWarning}
+        title="請求済案件です"
+        message="この案件はすでに請求書が発行されています。金額を変更しますか?"
+        confirmLabel="変更する"
+        cancelLabel="変更しない"
+        onConfirm={handleConfirmInvoicedBudgetWarning}
+        onCancel={handleCancelInvoicedBudgetWarning}
+      />
     </div>
   );
 }

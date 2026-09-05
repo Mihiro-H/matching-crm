@@ -1,22 +1,45 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ContractStatus, EstimateDocumentType } from "@/lib/supabase/database.types";
+import type { EstimatesListParams } from "./list-params";
 
 export type EstimateListRow = {
   id: string;
+  companyId: string;
   companyName: string;
+  projectId: string;
   projectTitle: string;
   documentType: EstimateDocumentType;
   amount: number;
   contractStatus: ContractStatus;
+  createdAt: string;
 };
 
-/** 見積・発注一覧(SCREEN_SPEC.md 5章) */
-export async function getEstimates(): Promise<{ estimates: EstimateListRow[]; error: string | null }> {
+/**
+ * 見積・発注一覧(SCREEN_SPEC.md 5章)のテーブル表示用データを取得する。
+ * 「企業名」「案件名」列は estimate_list_view (migration参照) で解決する。
+ * 列見出しクリックの絞り込み(企業名/案件名テキスト検索、種別チップ)にも対応する。
+ */
+export async function getEstimates(
+  params: EstimatesListParams
+): Promise<{ estimates: EstimateListRow[]; error: string | null }> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("estimates")
-    .select("id, document_type, amount, contract_status, project:projects(title, company:companies(name))")
-    .order("created_at", { ascending: false });
+
+  let query = supabase
+    .from("estimate_list_view")
+    .select("id, document_type, amount, contract_status, created_at, project_id, project_title, company_id, company_name")
+    .order(params.sortBy, { ascending: params.sortDir === "asc" });
+
+  if (params.documentTypeFilter) {
+    query = query.eq("document_type", params.documentTypeFilter);
+  }
+  if (params.companyNameFilter) {
+    query = query.ilike("company_name", `%${params.companyNameFilter}%`);
+  }
+  if (params.projectTitleFilter) {
+    query = query.ilike("project_title", `%${params.projectTitleFilter}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { estimates: [], error: error.message };
@@ -25,11 +48,14 @@ export async function getEstimates(): Promise<{ estimates: EstimateListRow[]; er
   return {
     estimates: (data ?? []).map((row) => ({
       id: row.id,
-      companyName: row.project?.company?.name ?? "(企業不明)",
-      projectTitle: row.project?.title ?? "(案件不明)",
+      companyId: row.company_id,
+      companyName: row.company_name,
+      projectId: row.project_id,
+      projectTitle: row.project_title,
       documentType: row.document_type,
       amount: row.amount,
       contractStatus: row.contract_status,
+      createdAt: row.created_at,
     })),
     error: null,
   };

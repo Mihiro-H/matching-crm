@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { requireEditAccess } from "@/lib/auth/require-edit";
+import { runDueReportSchedule } from "./run-report";
 import type { ReportFrequency } from "@/lib/supabase/database.types";
 import type { ReportMetricKey } from "./metrics";
 
@@ -88,6 +89,52 @@ export async function saveReport(input: SaveReportInput): Promise<SaveReportResu
   revalidatePath("/reports");
   revalidatePath(`/reports/${reportId}`);
   return { success: true, id: reportId };
+}
+
+export type RunReportNowResult = { success: true } | { success: false; error: string };
+
+/**
+ * 「今すぐ作成」(SCREEN_SPEC.md 8章): 定期実行を待たず、その場でレポートを1回実行する。
+ * 集計対象期間はスケジュールのfrequency(週次/月次)に基づき現時点から計算する点は
+ * cronによる定期実行(runDueReportSchedule)と同じ。日時のスケジュール判定
+ * (isScheduleDueNow)だけを迂回する。
+ */
+export async function runReportNow(reportId: string): Promise<RunReportNowResult> {
+  const authCheck = await requireEditAccess("reports");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { data: report, error } = await supabase
+    .from("reports")
+    .select("id, name, metrics, report_schedules(id, frequency, slack_channel_id, message_template)")
+    .eq("id", reportId)
+    .maybeSingle();
+
+  if (error || !report) {
+    return { success: false, error: error?.message ?? "レポートが見つかりません。" };
+  }
+
+  const schedule = report.report_schedules?.[0];
+  if (!schedule) {
+    return { success: false, error: "実行スケジュールが未設定です。先にスケジュールを保存してください。" };
+  }
+
+  const result = await runDueReportSchedule(
+    {
+      scheduleId: schedule.id,
+      reportId: report.id,
+      reportName: report.name,
+      metrics: Array.isArray(report.metrics) ? (report.metrics as ReportMetricKey[]) : [],
+      frequency: schedule.frequency,
+      slackChannelId: schedule.slack_channel_id,
+      messageTemplate: schedule.message_template,
+    },
+    new Date()
+  );
+
+  revalidatePath(`/reports/${reportId}/runs`);
+  revalidatePath("/reports");
+  return result;
 }
 
 export async function deleteReport(reportId: string): Promise<void> {

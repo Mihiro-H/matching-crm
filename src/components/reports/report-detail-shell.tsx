@@ -3,30 +3,24 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const TABS = [
-  { key: "edit", label: "編集" },
-  { key: "runs", label: "実行履歴" },
-] as const;
-
-export function ReportDetailShell({
-  reportId,
-  children,
-}: {
-  reportId: string;
-  children: React.ReactNode;
-}) {
+export function ReportDetailShell({ reportId, children }: { reportId: string; children: React.ReactNode }) {
   const pathname = usePathname();
+
+  const tabs = [
+    { href: `/reports/${reportId}`, label: "表示" },
+    { href: `/reports/${reportId}/edit`, label: "編集" },
+    { href: `/reports/${reportId}/runs`, label: "実行履歴" },
+  ];
 
   return (
     <div className="flex flex-col gap-4">
       <nav className="flex gap-1 border-b border-neutral-100">
-        {TABS.map((tab) => {
-          const href = `/reports/${reportId}/${tab.key}`;
-          const isActive = pathname === href;
+        {tabs.map((tab) => {
+          const isActive = pathname === tab.href;
           return (
             <Link
-              key={tab.key}
-              href={href}
+              key={tab.href}
+              href={tab.href}
               className={`px-4 py-2 text-sm ${
                 isActive
                   ? "border-b-2 border-primary-500 text-primary-600"

@@ -32,6 +32,21 @@ export async function getReportById(id: string): Promise<ReportDetail | null> {
 
 export type ReportRunRow = Database["public"]["Tables"]["report_runs"]["Row"];
 
+/** レポート表示画面(SCREEN_SPEC.md 8章)のヘッダー・本体に使う、直近の実行結果。 */
+export async function getLatestReportRun(reportId: string): Promise<ReportRunRow | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("report_runs")
+    .select("*")
+    .eq("report_id", reportId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
 /** 実行履歴タブ(SCREEN_SPEC.md 8章) */
 export async function getReportRuns(reportId: string): Promise<{ runs: ReportRunRow[]; error: string | null }> {
   const supabase = await createSupabaseServerClient();

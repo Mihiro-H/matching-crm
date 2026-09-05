@@ -17,12 +17,18 @@ export type DueSchedule = {
   messageTemplate: string;
 };
 
+export type RunReportScheduleResult = { success: true } | { success: false; error: string };
+
 /**
  * 定期実行1件分を処理する(SCREEN_SPEC.md 8章)。
  * 集計 → report_runsへスナップショット保存 → Slack通知、の順で行う。
  * 集計自体が失敗した場合もreport_runsにfailedとして記録し、通知は送らない。
+ *
+ * 戻り値は「今すぐ作成」(レポート詳細画面からの手動実行)が結果をその場で
+ * 表示できるようにするためのもの。cron側の呼び出しは戻り値を使わない
+ * (成否はreport_runsに記録済みのため)。
  */
-export async function runDueReportSchedule(schedule: DueSchedule, now: Date): Promise<void> {
+export async function runDueReportSchedule(schedule: DueSchedule, now: Date): Promise<RunReportScheduleResult> {
   const admin = createSupabaseAdminClient();
   const period = computeReportPeriod(schedule.frequency, now);
 
@@ -39,17 +45,20 @@ export async function runDueReportSchedule(schedule: DueSchedule, now: Date): Pr
 
     const text = renderMessageTemplate(schedule.messageTemplate, {
       report_name: schedule.reportName,
-      period: formatReportPeriodLabel(period),
+      period: formatReportPeriodLabel(period, schedule.frequency),
     });
     await sendSlackMessage(schedule.slackChannelId, text);
+    return { success: true };
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "レポート集計に失敗しました。";
     await admin.from("report_runs").insert({
       report_id: schedule.reportId,
       schedule_id: schedule.scheduleId,
       generated_at: now.toISOString(),
       result_snapshot: {},
       status: "failed",
-      error_message: err instanceof Error ? err.message : "レポート集計に失敗しました。",
+      error_message: errorMessage,
     });
+    return { success: false, error: errorMessage };
   }
 }

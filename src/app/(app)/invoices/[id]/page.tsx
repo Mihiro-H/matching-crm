@@ -3,7 +3,6 @@ import { getInvoiceById, getInvoicePaymentStatusLog } from "@/lib/invoices/get-i
 import { PAYMENT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
-import { buildFreeeInvoiceUrl } from "@/lib/freee";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
@@ -25,7 +24,6 @@ export default async function InvoiceDetailPage({
   }
 
   const log = await getInvoicePaymentStatusLog(id);
-  const freeeUrl = buildFreeeInvoiceUrl(invoice.freee_invoice_id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -54,15 +52,20 @@ export default async function InvoiceDetailPage({
         </dl>
 
         <p className="mt-4 text-xs text-neutral-600">
-          金額・入金状況の修正はfreee側で行ってください。Orbit上では編集できません。
+          入金状況はMisoca側の入金確認と定期的に同期されます。金額等の修正が必要な場合はMisoca側で行ってください。
         </p>
 
-        {freeeUrl ? (
-          <a href={freeeUrl} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-primary-600 hover:underline">
-            freeeで請求書を見る
+        {invoice.misoca_invoice_id ? (
+          <a
+            href={`/api/misoca/invoices/${invoice.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-sm text-primary-600 hover:underline"
+          >
+            請求書PDFを見る
           </a>
         ) : (
-          <p className="mt-2 text-xs text-neutral-400">freee未連携のため請求書リンクはまだありません。</p>
+          <p className="mt-2 text-xs text-neutral-400">Misoca未連携のためPDFはまだありません。</p>
         )}
       </div>
 

@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/import-meeting-recordings",
       "schedule": "15 9 * * *"
+    },
+    {
+      "path": "/api/cron/sync-misoca-invoices",
+      "schedule": "30 9 * * *"
     }
   ]
 }

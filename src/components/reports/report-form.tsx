@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
-import { saveReport } from "@/lib/reports/actions";
+import { runReportNow, saveReport } from "@/lib/reports/actions";
 import { REPORT_METRIC_OPTIONS, REPORT_MESSAGE_TEMPLATE_PLACEHOLDERS, type ReportMetricKey } from "@/lib/reports/metrics";
 import type { ReportDetail } from "@/lib/reports/get-report";
 import type { ReportFrequency } from "@/lib/supabase/database.types";
@@ -26,6 +26,7 @@ export function ReportForm({ existing }: { existing: ReportDetail | null }) {
   const [slackChannelId, setSlackChannelId] = useState(existing?.schedule?.slack_channel_id ?? "");
   const [messageTemplate, setMessageTemplate] = useState(existing?.schedule?.message_template ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRunningNow, setIsRunningNow] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function toggleMetric(key: ReportMetricKey) {
@@ -37,18 +38,14 @@ export function ReportForm({ existing }: { existing: ReportDetail | null }) {
     });
   }
 
-  async function handleSave() {
-    setError(null);
-    if (!name.trim()) {
-      setError("レポート名を入力してください。");
-      return;
-    }
-    if (metrics.size === 0) {
-      setError("含める項目を1つ以上選択してください。");
-      return;
-    }
-    setIsSubmitting(true);
-    const result = await saveReport({
+  function validate(): string | null {
+    if (!name.trim()) return "レポート名を入力してください。";
+    if (metrics.size === 0) return "含める項目を1つ以上選択してください。";
+    return null;
+  }
+
+  function buildSavePayload() {
+    return {
       reportId: existing?.id ?? null,
       name: name.trim(),
       metrics: Array.from(metrics),
@@ -58,13 +55,54 @@ export function ReportForm({ existing }: { existing: ReportDetail | null }) {
       timeOfDay: `${timeOfDay}:00`,
       slackChannelId,
       messageTemplate,
-    });
+    };
+  }
+
+  async function handleSave() {
+    setError(null);
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setIsSubmitting(true);
+    const result = await saveReport(buildSavePayload());
     setIsSubmitting(false);
     if (!result.success) {
       setError(result.error);
       return;
     }
     router.push(`/reports/${result.id}`);
+  }
+
+  /**
+   * 新規作成画面(existing === null)にも「今すぐ実行」を出す(SCREEN_SPEC.md 8章)。
+   * まだreports/report_schedules行が存在しないため、保存してから実行する。
+   * 既存レポートの編集画面(/reports/[id]/edit)側は、保存済みのスケジュールを
+   * そのまま実行できるレポート表示画面(/reports/[id])側のボタンを使うため、
+   * ここでは表示しない。
+   */
+  async function handleSaveAndRunNow() {
+    setError(null);
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setIsRunningNow(true);
+    const saveResult = await saveReport(buildSavePayload());
+    if (!saveResult.success) {
+      setIsRunningNow(false);
+      setError(saveResult.error);
+      return;
+    }
+    const runResult = await runReportNow(saveResult.id);
+    setIsRunningNow(false);
+    if (!runResult.success) {
+      setError(runResult.error);
+      return;
+    }
+    router.push(`/reports/${saveResult.id}`);
   }
 
   return (
@@ -183,14 +221,26 @@ export function ReportForm({ existing }: { existing: ReportDetail | null }) {
           </label>
         </div>
 
-        <button
-          type="button"
-          disabled={isSubmitting}
-          onClick={handleSave}
-          className="mt-6 rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
-        >
-          保存
-        </button>
+        <div className="mt-6 flex gap-2">
+          <button
+            type="button"
+            disabled={isSubmitting || isRunningNow}
+            onClick={handleSave}
+            className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
+          >
+            保存
+          </button>
+          {!existing && (
+            <button
+              type="button"
+              disabled={isSubmitting || isRunningNow}
+              onClick={() => void handleSaveAndRunNow()}
+              className="rounded-md border border-neutral-200 px-4 py-2 text-sm text-neutral-600 hover:bg-page-bg disabled:opacity-40"
+            >
+              {isRunningNow ? "実行中..." : "今すぐ実行"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

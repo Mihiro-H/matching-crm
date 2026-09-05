@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { IndividualPermissionsTab } from "./individual-permissions-tab";
 import { DepartmentPermissionsTab } from "./department-permissions-tab";
-import { DepartmentManagement } from "./department-management";
-import { UserManagement } from "./user-management";
 import type { Department, UserOption } from "@/lib/settings/get-permissions";
 
 // SCREEN_SPEC.md 10章 9-2: 権限設定は role='admin' のみアクセス可。
 // admin以外のnotFound()判定は親のsettings/layout.tsx(requireAdminPageAccess)で行う。
+// ユーザー管理・部署管理はここには混在させず、/settings/users・/settings/departments
+// という別タブに分離している(settings-tabs.tsx参照)。
 export function PermissionsPageClient({
   departments,
   users,
@@ -46,9 +46,6 @@ export function PermissionsPageClient({
       </div>
 
       {subTab === "individual" ? <IndividualPermissionsTab /> : <DepartmentPermissionsTab departments={departments} users={users} />}
-
-      <DepartmentManagement departments={departments} />
-      <UserManagement users={users} departments={departments} />
     </div>
   );
 }

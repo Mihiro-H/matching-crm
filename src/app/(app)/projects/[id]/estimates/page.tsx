@@ -1,9 +1,9 @@
 import { getProjectEstimates } from "@/lib/projects/get-project-estimates";
 import { CONTRACT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { formatCurrencyJPY } from "@/lib/format";
+import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 
-const DOCUMENT_TYPE_LABELS = { estimate: "見積書", order: "発注書" } as const;
+const DOCUMENT_TYPE_LABELS = { estimate: "見積書", delivery_slip: "納品書" } as const;
 
 export default async function ProjectEstimatesTab({
   params,
@@ -29,6 +29,7 @@ export default async function ProjectEstimatesTab({
             <th className="px-4 py-3 font-medium">種別</th>
             <th className="px-4 py-3 font-medium">金額</th>
             <th className="px-4 py-3 font-medium">締結ステータス</th>
+            <th className="px-4 py-3 font-medium">作成日</th>
           </tr>
         </thead>
         <tbody>
@@ -39,6 +40,7 @@ export default async function ProjectEstimatesTab({
               <td className="px-4 py-3">
                 <StatusBadge meta={CONTRACT_STATUS_META[estimate.contract_status]} />
               </td>
+              <td className="px-4 py-3 text-neutral-600">{formatDateJa(estimate.created_at)}</td>
             </tr>
           ))}
         </tbody>

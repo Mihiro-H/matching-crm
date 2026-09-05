@@ -28,7 +28,7 @@ export type ProjectStatus =
   | "payment_pending"
   | "completed";
 export type AssigneeRole = "primary" | "secondary";
-export type EstimateDocumentType = "estimate" | "order";
+export type EstimateDocumentType = "estimate" | "delivery_slip";
 export type ContractStatus = "draft" | "sent" | "signed" | "rejected";
 export type MeetingNoteSource = "zoom" | "upload" | "manual";
 export type DriveMeetingImportStatus = "submitted" | "completed" | "failed";
@@ -40,7 +40,7 @@ export type NotificationEventType =
   | "reminder";
 export type ReportFrequency = "weekly" | "monthly";
 export type ReportRunStatus = "success" | "failed";
-export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom";
+export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom" | "misoca";
 export type IntegrationDirection = "inbound" | "outbound";
 export type IntegrationRelatedEntityType = "contact" | "project" | "estimate" | "invoice" | "meeting_note";
 export type IntegrationLogStatus = "success" | "failed" | "retrying";
@@ -63,6 +63,8 @@ export interface Database {
           department_id: string | null;
           slack_user_id: string | null;
           is_lead_distributor: boolean;
+          // supabase/migrations/20260908090000_users_archive.sql
+          is_archived: boolean;
           created_at: string;
         };
         Insert: {
@@ -73,6 +75,7 @@ export interface Database {
           department_id?: string | null;
           slack_user_id?: string | null;
           is_lead_distributor?: boolean;
+          is_archived?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
@@ -127,6 +130,8 @@ export interface Database {
           first_contact_date: string | null;
           platform_account_id: string | null;
           esignature_email: string | null;
+          misoca_contact_group_id: string | null;
+          misoca_contact_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -138,6 +143,8 @@ export interface Database {
           first_contact_date?: string | null;
           platform_account_id?: string | null;
           esignature_email?: string | null;
+          misoca_contact_group_id?: string | null;
+          misoca_contact_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -392,6 +399,7 @@ export interface Database {
           amount: number;
           pdf_url: string | null;
           cloudsign_document_id: string | null;
+          misoca_document_id: string | null;
           contract_status: ContractStatus;
           sent_at: string | null;
           signed_at: string | null;
@@ -404,6 +412,7 @@ export interface Database {
           amount: number;
           pdf_url?: string | null;
           cloudsign_document_id?: string | null;
+          misoca_document_id?: string | null;
           contract_status: ContractStatus;
           sent_at?: string | null;
           signed_at?: string | null;
@@ -519,12 +528,41 @@ export interface Database {
           },
         ];
       };
+      // supabase/migrations/20260907070000_misoca_oauth_tokens.sql
+      misoca_oauth_tokens: {
+        Row: {
+          id: boolean;
+          access_token: string;
+          refresh_token: string;
+          expires_at: string;
+          connected_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          access_token: string;
+          refresh_token: string;
+          expires_at: string;
+          connected_by?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["misoca_oauth_tokens"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "misoca_oauth_tokens_connected_by_fkey";
+            columns: ["connected_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       invoices: {
         Row: {
           id: string;
           project_id: string;
           company_id: string;
           freee_invoice_id: string | null;
+          misoca_invoice_id: string | null;
           amount: number;
           issued_date: string | null;
           due_date: string | null;
@@ -538,6 +576,7 @@ export interface Database {
           project_id: string;
           company_id: string;
           freee_invoice_id?: string | null;
+          misoca_invoice_id?: string | null;
           amount: number;
           issued_date?: string | null;
           due_date?: string | null;
@@ -835,6 +874,21 @@ export interface Database {
           assignee_name: string | null;
           created_at: string;
           updated_at: string;
+        };
+        Relationships: [];
+      };
+      // supabase/migrations/20260907170000_estimate_list_view.sql
+      estimate_list_view: {
+        Row: {
+          id: string;
+          document_type: EstimateDocumentType;
+          amount: number;
+          contract_status: ContractStatus;
+          created_at: string;
+          project_id: string;
+          project_title: string;
+          company_id: string;
+          company_name: string;
         };
         Relationships: [];
       };

@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobCategory } from "@/lib/supabase/database.types";
+import type { FreelancersListParams } from "./list-params";
 
 export type FreelancerListRow = {
   id: string;
@@ -16,13 +17,32 @@ export type FreelancerListRow = {
  * フリーランス一覧(SCREEN_SPEC.md 9章、管理者限定・閲覧専用)。
  * 「進行中案件数」は project_role_assignments 等との集計が必要なため
  * freelancer_list_view (migration参照) で解決する。
+ * 列見出しクリックの絞り込み(ID/氏名/メールのテキスト検索)、対応職種チップにも対応する。
  */
-export async function getFreelancers(): Promise<{ freelancers: FreelancerListRow[]; error: string | null }> {
+export async function getFreelancers(
+  params: FreelancersListParams
+): Promise<{ freelancers: FreelancerListRow[]; error: string | null }> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+
+  let query = supabase
     .from("freelancer_list_view")
     .select("id, platform_freelancer_id, name, email, job_categories, last_imported_at, active_project_count")
-    .order("name");
+    .order(params.sortBy, { ascending: params.sortDir === "asc" });
+
+  if (params.jobCategoryFilter) {
+    query = query.contains("job_categories", [params.jobCategoryFilter]);
+  }
+  if (params.platformFreelancerIdFilter) {
+    query = query.ilike("platform_freelancer_id", `%${params.platformFreelancerIdFilter}%`);
+  }
+  if (params.nameFilter) {
+    query = query.ilike("name", `%${params.nameFilter}%`);
+  }
+  if (params.emailFilter) {
+    query = query.ilike("email", `%${params.emailFilter}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { freelancers: [], error: error.message };

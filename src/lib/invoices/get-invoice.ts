@@ -35,7 +35,7 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
 
 /**
  * 入金状況の変更履歴(SCREEN_SPEC.md 7章)。
- * invoicesテーブル自体に履歴カラムはないため、freee Webhookの受信ログである
+ * invoicesテーブル自体に履歴カラムはないため、Misoca連携の実行ログである
  * integration_logs(related_entity_type='invoice')を履歴として表示する。
  */
 export async function getInvoicePaymentStatusLog(invoiceId: string): Promise<PaymentStatusLogEntry[]> {
@@ -43,7 +43,7 @@ export async function getInvoicePaymentStatusLog(invoiceId: string): Promise<Pay
   const { data, error } = await supabase
     .from("integration_logs")
     .select("occurred_at, status, payload")
-    .eq("integration_type", "freee")
+    .eq("integration_type", "misoca")
     .eq("related_entity_type", "invoice")
     .eq("related_entity_id", invoiceId)
     .order("occurred_at", { ascending: false });

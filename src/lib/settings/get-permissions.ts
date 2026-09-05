@@ -8,8 +8,10 @@ export type Department = { id: string; name: string };
 export type UserOption = {
   id: string;
   name: string;
+  email: string;
   departmentId: string | null;
   isLeadDistributor: boolean;
+  isArchived: boolean;
 };
 
 export async function getDepartments(): Promise<Department[]> {
@@ -23,14 +25,17 @@ export async function getUsers(): Promise<UserOption[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("users")
-    .select("id, name, department_id, is_lead_distributor")
+    .select("id, name, email, department_id, is_lead_distributor, is_archived")
+    .order("is_archived")
     .order("name");
   if (error) return [];
   return (data ?? []).map((row) => ({
     id: row.id,
     name: row.name,
+    email: row.email,
     departmentId: row.department_id,
     isLeadDistributor: row.is_lead_distributor,
+    isArchived: row.is_archived,
   }));
 }
 

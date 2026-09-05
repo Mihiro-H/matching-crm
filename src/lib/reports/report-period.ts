@@ -16,7 +16,20 @@ export function computeReportPeriod(frequency: ReportFrequency, now: Date): Repo
   return { startIso: start.toISOString(), endIso: now.toISOString() };
 }
 
-/** 通知文面の{{period}}プレースホルダー用ラベル */
-export function formatReportPeriodLabel(period: ReportPeriod): string {
+/**
+ * 通知文面の{{period}}プレースホルダー、レポート表示画面の「対象期間」用ラベル。
+ * 週次は開始〜終了の日付範囲、月次は「集計期間はendIsoの前月」という前提のもと
+ * 「YYYY年M月」の1語で表す(SCREEN_SPEC.md 8章の例:「2026年8月」。
+ * computeReportPeriodの月次は「実行時点から遡って30日」の近似のため、
+ * 厳密な暦月とは一致しない場合があるが、表示上は実行月の前月として扱う)。
+ */
+export function formatReportPeriodLabel(period: ReportPeriod, frequency: ReportFrequency): string {
+  if (frequency === "monthly") {
+    const end = new Date(period.endIso);
+    const year = end.getUTCFullYear();
+    const month = end.getUTCMonth(); // 0-indexed; 前月を指すのでそのまま使う
+    const prevMonthDate = new Date(Date.UTC(year, month - 1, 1));
+    return `${prevMonthDate.getUTCFullYear()}年${prevMonthDate.getUTCMonth() + 1}月`;
+  }
   return `${formatDateJa(period.startIso)}〜${formatDateJa(period.endIso)}`;
 }

@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ReportFrequency, ReportRunStatus } from "@/lib/supabase/database.types";
+import type { ReportFrequency } from "@/lib/supabase/database.types";
 import { computeNextRunAt } from "./next-run";
 
 export type ReportListRow = {
@@ -7,7 +7,7 @@ export type ReportListRow = {
   name: string;
   frequency: ReportFrequency | null;
   nextRunAt: string | null;
-  lastRunStatus: ReportRunStatus | null;
+  lastRunAt: string | null;
 };
 
 /**
@@ -21,7 +21,7 @@ export async function getReports(): Promise<{ reports: ReportListRow[]; error: s
   const { data, error } = await supabase
     .from("reports")
     .select(
-      "id, name, report_schedules(frequency, day_of_week, day_of_month, time_of_day, is_active), report_runs(status, generated_at)"
+      "id, name, report_schedules(frequency, day_of_week, day_of_month, time_of_day, is_active), report_runs(generated_at)"
     )
     .order("created_at", { ascending: false });
 
@@ -56,7 +56,7 @@ export async function getReports(): Promise<{ reports: ReportListRow[]; error: s
         name: row.name,
         frequency: schedule?.frequency ?? null,
         nextRunAt,
-        lastRunStatus: lastRun?.status ?? null,
+        lastRunAt: lastRun?.generated_at ?? null,
       };
     }),
     error: null,

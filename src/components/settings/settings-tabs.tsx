@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { key: "notifications", label: "通知設定" },
   { key: "permissions", label: "権限設定" },
+  { key: "users", label: "ユーザー管理" },
+  { key: "departments", label: "部署管理" },
+  { key: "integrations", label: "外部連携" },
 ] as const;
 
 export function SettingsTabs() {

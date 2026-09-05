@@ -20,6 +20,8 @@ export default async function ReportDetailLayout({
     return <SupabaseNotConfiguredNotice />;
   }
 
+  // hidden権限のユーザーをnotFound()にする、共通の権限ゲート
+  // (表示/編集/実行履歴の各ページはこのレイアウト配下のため、ここで一括判定する)。
   await requirePageAccess("reports");
 
   const report = await getReportById(id);

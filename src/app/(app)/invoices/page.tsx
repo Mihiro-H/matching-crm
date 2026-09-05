@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { getInvoices } from "@/lib/invoices/get-invoices";
+import { getMisocaConnectionStatus } from "@/lib/misoca/get-connection-status";
 import { PAYMENT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
-import { isFreeeConfigured } from "@/lib/freee";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 
@@ -12,21 +12,29 @@ export default async function InvoicesPage() {
     return <SupabaseNotConfiguredNotice />;
   }
 
-  await requirePageAccess("invoices");
+  const { canEdit } = await requirePageAccess("invoices");
 
   const { invoices, error } = await getInvoices();
-  const freeeConnected = isFreeeConfigured();
+  const misocaStatus = await getMisocaConnectionStatus();
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between">
         <span
           className={`rounded-full px-3 py-1 text-xs ${
-            freeeConnected ? "bg-success-bg text-success-text" : "bg-neutral-100 text-neutral-600"
+            misocaStatus.connected ? "bg-success-bg text-success-text" : "bg-neutral-100 text-neutral-600"
           }`}
         >
-          {freeeConnected ? "freee連携中" : "freee未連携"}
+          {misocaStatus.connected ? "Misoca連携中" : "Misoca未連携"}
         </span>
+        {canEdit && (
+          <Link
+            href="/invoices/new"
+            className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0"
+          >
+            +請求書を作成
+          </Link>
+        )}
       </div>
 
       {error && (

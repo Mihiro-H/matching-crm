@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { SearchSelectModal, type SearchResultItem } from "@/components/ui/search-select-modal";
-import { searchUsers } from "@/lib/search-select/actions";
+import { searchAssignableUsers } from "@/lib/search-select/actions";
 import { addSecondaryAssignee, removeAssignee, setPrimaryAssignee } from "@/lib/projects/actions";
 import type { ProjectAssignee } from "@/lib/projects/get-project-assignees";
 
@@ -145,7 +145,7 @@ export function AssigneeSection({
         title="主担当を選択"
         placeholder="氏名で検索"
         mode="single"
-        search={searchUsers}
+        search={searchAssignableUsers}
         onConfirm={handlePrimarySelected}
       />
       <SearchSelectModal
@@ -155,7 +155,7 @@ export function AssigneeSection({
         placeholder="氏名で検索"
         mode="multiple"
         confirmLabel="追加"
-        search={searchUsers}
+        search={searchAssignableUsers}
         onConfirm={handleSecondaryAdded}
       />
     </div>

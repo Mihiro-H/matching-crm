@@ -1,33 +1,79 @@
 import Link from "next/link";
 import { getEstimates } from "@/lib/estimates/get-estimates";
-import { CONTRACT_STATUS_META } from "@/lib/status-badges";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { formatCurrencyJPY } from "@/lib/format";
+import { parseEstimatesListParams } from "@/lib/estimates/list-params";
+import { EstimatesTable } from "@/components/estimates/estimates-table";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import type { EstimateDocumentType } from "@/lib/supabase/database.types";
 
-const DOCUMENT_TYPE_LABELS = { estimate: "見積書", order: "発注書" } as const;
+// SCREEN_SPEC.md 5章: 種別フィルターのチップ(すべて/見積書/納品書)
+const DOCUMENT_TYPE_FILTER_CHIPS: { label: string; value: EstimateDocumentType | null }[] = [
+  { label: "すべて", value: null },
+  { label: "見積書", value: "estimate" },
+  { label: "納品書", value: "delivery_slip" },
+];
 
-export default async function EstimatesPage() {
+export default async function EstimatesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    sort?: string;
+    dir?: string;
+    documentType?: string;
+    companyName?: string;
+    projectTitle?: string;
+  }>;
+}) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
 
   const { canEdit } = await requirePageAccess("estimates");
-  const { estimates, error } = await getEstimates();
+
+  const resolvedParams = await searchParams;
+  const params = parseEstimatesListParams(resolvedParams);
+  const { estimates, error } = await getEstimates(params);
+
+  function chipHref(documentType: EstimateDocumentType | null) {
+    const next = new URLSearchParams();
+    next.set("sort", params.sortBy);
+    next.set("dir", params.sortDir);
+    if (documentType) next.set("documentType", documentType);
+    if (params.companyNameFilter) next.set("companyName", params.companyNameFilter);
+    if (params.projectTitleFilter) next.set("projectTitle", params.projectTitleFilter);
+    return `/estimates?${next.toString()}`;
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      {canEdit && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          {DOCUMENT_TYPE_FILTER_CHIPS.map((chip) => {
+            const isActive = params.documentTypeFilter === chip.value;
+            return (
+              <Link
+                key={chip.label}
+                href={chipHref(chip.value)}
+                className={`rounded-full px-3 py-1 text-sm ${
+                  isActive
+                    ? "bg-primary-500 text-neutral-0"
+                    : "border border-neutral-200 text-neutral-600 hover:bg-page-bg"
+                }`}
+              >
+                {chip.label}
+              </Link>
+            );
+          })}
+        </div>
+        {canEdit && (
           <Link
             href="/estimates/new"
             className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0"
           >
             +見積・発注を作成
           </Link>
-        </div>
-      )}
+        )}
+      </div>
 
       {error && (
         <div className="rounded-lg border border-danger-bg bg-danger-bg p-4 text-sm text-danger-text">
@@ -35,39 +81,7 @@ export default async function EstimatesPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="px-4 py-3 font-medium">企業名</th>
-              <th className="px-4 py-3 font-medium">案件名</th>
-              <th className="px-4 py-3 font-medium">種別</th>
-              <th className="px-4 py-3 font-medium">金額</th>
-              <th className="px-4 py-3 font-medium">締結ステータス</th>
-            </tr>
-          </thead>
-          <tbody>
-            {estimates.map((estimate) => (
-              <tr key={estimate.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3 text-neutral-600">{estimate.companyName}</td>
-                <td className="px-4 py-3 text-neutral-900">{estimate.projectTitle}</td>
-                <td className="px-4 py-3 text-neutral-600">{DOCUMENT_TYPE_LABELS[estimate.documentType]}</td>
-                <td className="px-4 py-3 text-neutral-600">{formatCurrencyJPY(estimate.amount)}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge meta={CONTRACT_STATUS_META[estimate.contractStatus]} />
-                </td>
-              </tr>
-            ))}
-            {estimates.length === 0 && !error && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-600">
-                  見積・発注はまだありません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {!error && <EstimatesTable estimates={estimates} params={params} />}
     </div>
   );
 }

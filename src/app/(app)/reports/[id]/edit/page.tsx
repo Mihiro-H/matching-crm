@@ -11,8 +11,8 @@ export default async function ReportEditPage({
   const { id } = await params;
   const { canEdit } = await requirePageAccess("reports");
   if (!canEdit) {
-    // SCREEN_SPEC.md 8章「権限」: viewは編集不可(閲覧・実行履歴の確認のみ)
-    redirect(`/reports/${id}/runs`);
+    // SCREEN_SPEC.md 8章「権限」: viewは編集不可(レポート表示画面・実行履歴の確認のみ)
+    redirect(`/reports/${id}`);
   }
 
   const report = await getReportById(id);

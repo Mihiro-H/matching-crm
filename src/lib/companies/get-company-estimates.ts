@@ -7,6 +7,7 @@ export type CompanyEstimateRow = {
   amount: number;
   contractStatus: ContractStatus;
   projectTitle: string;
+  createdAt: string;
 };
 
 /**
@@ -20,7 +21,7 @@ export async function getCompanyEstimates(
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("estimates")
-    .select("id, document_type, amount, contract_status, project:projects!inner(title, company_id)")
+    .select("id, document_type, amount, contract_status, created_at, project:projects!inner(title, company_id)")
     .eq("project.company_id", companyId)
     .order("created_at", { ascending: false });
 
@@ -35,6 +36,7 @@ export async function getCompanyEstimates(
       amount: row.amount,
       contractStatus: row.contract_status,
       projectTitle: row.project?.title ?? "(案件不明)",
+      createdAt: row.created_at,
     })),
     error: null,
   };

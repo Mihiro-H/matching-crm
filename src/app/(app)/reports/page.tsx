@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { getReports } from "@/lib/reports/get-reports";
+import { ReportsTable } from "@/components/reports/reports-table";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
-
-const FREQUENCY_LABELS = { weekly: "週次", monthly: "月次" } as const;
-const RUN_STATUS_LABELS = { success: "成功", failed: "失敗" } as const;
 
 export default async function ReportsPage() {
   if (!isSupabaseConfigured()) {
@@ -30,45 +28,7 @@ export default async function ReportsPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="px-4 py-3 font-medium">レポート名</th>
-              <th className="px-4 py-3 font-medium">頻度</th>
-              <th className="px-4 py-3 font-medium">次回実行日時</th>
-              <th className="px-4 py-3 font-medium">最終実行結果</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((report) => (
-              <tr key={report.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/reports/${report.id}`} className="text-primary-600 hover:underline">
-                    {report.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {report.frequency ? FREQUENCY_LABELS[report.frequency] : "-"}
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {report.nextRunAt ? new Date(report.nextRunAt).toLocaleString("ja-JP") : "-"}
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {report.lastRunStatus ? RUN_STATUS_LABELS[report.lastRunStatus] : "未実行"}
-                </td>
-              </tr>
-            ))}
-            {reports.length === 0 && !error && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-neutral-600">
-                  レポートはまだありません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {!error && <ReportsTable reports={reports} />}
     </div>
   );
 }

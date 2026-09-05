@@ -2,25 +2,27 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type ProjectSigningInfo = {
+export type ProjectDocumentInfo = {
   companyId: string;
   companyName: string;
   /** 企業に登録済みの署名者メール、無ければ最新の担当者(contacts.email)を仮のデフォルトとする。 */
   signerEmail: string;
   signerName: string;
+  /** 見積書・納品書・請求書作成画面で金額欄へ自動反映する、案件の現在の金額。 */
+  budget: number | null;
 };
 
 /**
- * 見積・発注送付フォーム(SCREEN_SPEC.md 5章)で案件を選択した際、
- * クラウドサインの宛先入力欄をあらかじめ埋めるための情報を取得する。
+ * 見積書・納品書・請求書作成フォーム(SCREEN_SPEC.md 5,7章)で案件を選択した際、
+ * クラウドサインの宛先入力欄・金額欄をあらかじめ埋めるための情報を取得する。
  * あくまで初期値であり、送信者が上書きできる。
  */
-export async function getProjectSigningInfo(projectId: string): Promise<ProjectSigningInfo | null> {
+export async function getProjectDocumentInfo(projectId: string): Promise<ProjectDocumentInfo | null> {
   const supabase = await createSupabaseServerClient();
   const { data: project, error } = await supabase
     .from("projects")
     .select(
-      "company_id, company:companies(name, esignature_email), contact:contacts(name, email)"
+      "company_id, budget, company:companies(name, esignature_email), contact:contacts(name, email)"
     )
     .eq("id", projectId)
     .maybeSingle();
@@ -32,5 +34,6 @@ export async function getProjectSigningInfo(projectId: string): Promise<ProjectS
     companyName: project.company?.name ?? "",
     signerEmail: project.company?.esignature_email ?? project.contact?.email ?? "",
     signerName: project.contact?.name ?? project.company?.name ?? "",
+    budget: project.budget ?? null,
   };
 }
