@@ -1,37 +1,24 @@
-import type { CompanyStatus } from "@/lib/supabase/database.types";
-
-export const COMPANY_SORTABLE_COLUMNS = [
-  "name",
-  "industry",
-  "status",
-  "latest_project",
-  "assignee",
-] as const;
+export const COMPANY_SORTABLE_COLUMNS = ["name", "industry", "latest_project"] as const;
 
 export type CompanySortColumn = (typeof COMPANY_SORTABLE_COLUMNS)[number];
 export type SortDirection = "asc" | "desc";
 
-const VALID_STATUSES: CompanyStatus[] = ["negotiating", "active", "paused", "cold"];
-
 export type CompaniesListParams = {
   sortBy: CompanySortColumn;
   sortDir: SortDirection;
-  statusFilter: CompanyStatus | null;
   nameFilter: string | null;
-  assigneeFilter: { id: string; name: string } | null;
 };
 
 /**
  * 企業一覧(SCREEN_SPEC.md 3章)のURLクエリパラメータを解釈する。
  * 不正な値はすべて安全なデフォルトにフォールバックする。
+ * ステータス・担当者は廃止した(企業は商談・案件が実体を持つため、企業自体には
+ * 持たせない)。
  */
 export function parseCompaniesListParams(params: {
   sort?: string;
   dir?: string;
-  status?: string;
   name?: string;
-  assigneeId?: string;
-  assigneeName?: string;
 }): CompaniesListParams {
   const sortBy = COMPANY_SORTABLE_COLUMNS.includes(params.sort as CompanySortColumn)
     ? (params.sort as CompanySortColumn)
@@ -39,17 +26,9 @@ export function parseCompaniesListParams(params: {
 
   const sortDir: SortDirection = params.dir === "desc" ? "desc" : "asc";
 
-  const statusFilter = VALID_STATUSES.includes(params.status as CompanyStatus)
-    ? (params.status as CompanyStatus)
-    : null;
-
   const nameFilter = params.name?.trim() || null;
-  const assigneeFilter =
-    params.assigneeId?.trim() && params.assigneeName?.trim()
-      ? { id: params.assigneeId.trim(), name: params.assigneeName.trim() }
-      : null;
 
-  return { sortBy, sortDir, statusFilter, nameFilter, assigneeFilter };
+  return { sortBy, sortDir, nameFilter };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

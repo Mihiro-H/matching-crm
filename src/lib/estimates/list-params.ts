@@ -26,7 +26,7 @@ export type EstimatesListParams = {
  * 見積・発注一覧(SCREEN_SPEC.md 5章)のURLクエリパラメータを解釈する。
  * 不正な値はすべて安全なデフォルトにフォールバックする。
  * デフォルトは新着順(created_at desc、企業一覧/案件管理と違い、見積・発注は
- * 最近作成したものから確認するのが自然なため商談・担当者管理と同じ方針にする)。
+ * 最近作成したものから確認するのが自然なため商談管理と同じ方針にする)。
  */
 export function parseEstimatesListParams(params: {
   sort?: string;

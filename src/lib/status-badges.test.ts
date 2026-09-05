@@ -1,35 +1,16 @@
 import { describe, expect, test } from "vitest";
 import {
-  COMPANY_STATUS_META,
-  CONTACT_STATUS_META,
   CONTRACT_STATUS_META,
+  DEAL_STATUS_META,
   PAYMENT_STATUS_META,
   PROJECT_STATUS_META,
   SEMANTIC_STATUS_CLASSES,
 } from "./status-badges";
 
-describe("COMPANY_STATUS_META", () => {
-  test("maps every companies.status value to a label and one of the 4 semantic categories", () => {
-    expect(COMPANY_STATUS_META.negotiating).toEqual({ label: "商談中", semantic: "info" });
-    expect(COMPANY_STATUS_META.active).toEqual({ label: "進行中", semantic: "success" });
-    expect(COMPANY_STATUS_META.paused).toEqual({ label: "一時休止", semantic: "warning" });
-    expect(COMPANY_STATUS_META.cold).toEqual({ label: "コールド", semantic: "danger" });
-  });
-
-  test("every semantic category used has bg/text classes defined", () => {
-    for (const { semantic } of Object.values(COMPANY_STATUS_META)) {
-      expect(SEMANTIC_STATUS_CLASSES[semantic]).toBeDefined();
-      expect(SEMANTIC_STATUS_CLASSES[semantic].bg).toMatch(/^bg-/);
-      expect(SEMANTIC_STATUS_CLASSES[semantic].text).toMatch(/^text-/);
-    }
-  });
-});
-
 describe("PROJECT_STATUS_META", () => {
-  test("maps every projects.status value (DB_SCHEMA.md 8段階)", () => {
+  test("maps every projects.status value(商談中・見積提出済は廃止、受注から始まる)", () => {
     expect(Object.keys(PROJECT_STATUS_META)).toEqual([
-      "negotiating",
-      "estimate_submitted",
+      "won",
       "contract_sent",
       "contracted",
       "in_progress",
@@ -42,6 +23,14 @@ describe("PROJECT_STATUS_META", () => {
   test("completed is treated as success, not still-in-flight", () => {
     expect(PROJECT_STATUS_META.completed.semantic).toBe("success");
   });
+
+  test("every semantic category used has bg/text classes defined", () => {
+    for (const { semantic } of Object.values(PROJECT_STATUS_META)) {
+      expect(SEMANTIC_STATUS_CLASSES[semantic]).toBeDefined();
+      expect(SEMANTIC_STATUS_CLASSES[semantic].bg).toMatch(/^bg-/);
+      expect(SEMANTIC_STATUS_CLASSES[semantic].text).toMatch(/^text-/);
+    }
+  });
 });
 
 describe("CONTRACT_STATUS_META", () => {
@@ -53,13 +42,14 @@ describe("CONTRACT_STATUS_META", () => {
   });
 });
 
-describe("CONTACT_STATUS_META", () => {
-  test("maps every contacts.status value", () => {
-    expect(CONTACT_STATUS_META.new.semantic).toBe("info");
-    expect(CONTACT_STATUS_META.in_progress.semantic).toBe("info");
-    expect(CONTACT_STATUS_META.negotiating.semantic).toBe("info");
-    expect(CONTACT_STATUS_META.won.semantic).toBe("success");
-    expect(CONTACT_STATUS_META.lost.semantic).toBe("danger");
+describe("DEAL_STATUS_META", () => {
+  test("maps every deals.status value, including the newly added on_hold", () => {
+    expect(DEAL_STATUS_META.new.semantic).toBe("info");
+    expect(DEAL_STATUS_META.in_progress.semantic).toBe("info");
+    expect(DEAL_STATUS_META.negotiating.semantic).toBe("info");
+    expect(DEAL_STATUS_META.on_hold.semantic).toBe("warning");
+    expect(DEAL_STATUS_META.won.semantic).toBe("success");
+    expect(DEAL_STATUS_META.lost.semantic).toBe("danger");
   });
 });
 

@@ -1,8 +1,9 @@
 import type { ProjectStatus } from "@/lib/supabase/database.types";
 
+// 案件は商談管理側で受注が確定した時点で初めて作られるため、「受注」から始まる
+// (旧「商談中」「見積提出済」の2段階は商談管理(deals)側に移管した)。
 export const PROJECT_STATUS_ORDER: ProjectStatus[] = [
-  "negotiating",
-  "estimate_submitted",
+  "won",
   "contract_sent",
   "contracted",
   "in_progress",

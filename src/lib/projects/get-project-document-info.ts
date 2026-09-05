@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export type ProjectDocumentInfo = {
   companyId: string;
   companyName: string;
-  /** 企業に登録済みの署名者メール、無ければ最新の担当者(contacts.email)を仮のデフォルトとする。 */
+  /** 企業に登録済みの署名者メール、無ければ案件の窓口担当者(people.email)を仮のデフォルトとする。 */
   signerEmail: string;
   signerName: string;
   /** 見積書・納品書・請求書作成画面で金額欄へ自動反映する、案件の現在の金額。 */
@@ -22,7 +22,7 @@ export async function getProjectDocumentInfo(projectId: string): Promise<Project
   const { data: project, error } = await supabase
     .from("projects")
     .select(
-      "company_id, budget, company:companies(name, esignature_email), contact:contacts(name, email)"
+      "company_id, budget, company:companies(name, esignature_email), contact:people(name, email)"
     )
     .eq("id", projectId)
     .maybeSingle();

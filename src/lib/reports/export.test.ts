@@ -12,7 +12,7 @@ const baseInput: ReportExportInput = {
     {
       key: "project_status_breakdown",
       label: "案件ステータス内訳",
-      value: { negotiating: 2, in_progress: 5 },
+      value: { won: 2, in_progress: 5 },
     },
     {
       key: "assignee_performance",
@@ -51,7 +51,7 @@ describe("buildReportCsv", () => {
 
   test("renders the project status breakdown with Japanese status labels", () => {
     const csv = buildReportCsv(baseInput);
-    expect(csv).toContain("商談中");
+    expect(csv).toContain("受注");
     expect(csv).toContain("進行中");
   });
 

@@ -8,8 +8,8 @@ import type { NotificationEventType } from "@/lib/supabase/database.types";
 export type NotificationContext = {
   /** 案件に紐づくイベント(contract_signed/payment_confirmed/reminder)の通知先解決に使う */
   projectId?: string;
-  /** new_leadの通知タップ時の遷移先(問い合わせ詳細)に使う */
-  contactId?: string;
+  /** new_leadの通知タップ時の遷移先(商談詳細)に使う */
+  dealId?: string;
 };
 
 /**
@@ -87,7 +87,7 @@ function resolveNotificationLinkPath(
   context: NotificationContext
 ): string | null {
   if (eventType === "new_lead") {
-    return context.contactId ? `/contacts/${context.contactId}` : null;
+    return context.dealId ? `/deals/${context.dealId}` : null;
   }
   return context.projectId ? `/projects/${context.projectId}` : null;
 }

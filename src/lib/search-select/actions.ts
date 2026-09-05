@@ -155,8 +155,6 @@ export async function searchProjectsByCompany(
 /**
  * 企業選択モーダルからのインライン新規登録
  * (SCREEN_SPEC.md「企業選択モーダルの新規作成フロー」)。
- * 新規企業のstatusは「negotiating(商談中)」を初期値とする
- * (DB_SCHEMA.mdに初期値の指定はなく、関係が始まったばかりの状態として妥当と判断)。
  */
 export async function createCompany(
   name: string,
@@ -165,10 +163,50 @@ export async function createCompany(
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("companies")
-    .insert({ name, industry, status: "negotiating" })
+    .insert({ name, industry })
     .select("id, name, industry")
     .single();
 
   if (error) throw new Error(`企業の登録に失敗しました: ${error.message}`);
   return { id: data.id, label: data.name, sublabel: data.industry };
+}
+
+/** 担当者選択(SCREEN_SPEC.md「商談管理」作成画面: 商談に紐づける担当者を選ぶ) */
+export async function searchPeople(query: string): Promise<SearchResultItem[]> {
+  const supabase = await createSupabaseServerClient();
+  let request = supabase
+    .from("people")
+    .select("id, name, company_name_raw, company:companies(name)")
+    .order("name")
+    .limit(SEARCH_LIMIT);
+  if (query.trim()) {
+    request = request.ilike("name", `%${query.trim()}%`);
+  }
+  const { data, error } = await request;
+  if (error) throw new Error(`担当者の検索に失敗しました: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    label: row.name,
+    sublabel: row.company?.name ?? row.company_name_raw,
+  }));
+}
+
+/**
+ * 担当者選択モーダルからのインライン新規登録(商談作成画面: SCREEN_SPEC.md「商談管理」)。
+ * 企業はここでは仮の名前(自由入力)のみ受け付ける(正式な企業への紐付けは
+ * 担当者詳細ページ/people/[id]で行う、CreateCompanyInlineFormと同じ簡易入力方針)。
+ */
+export async function createPersonInline(
+  name: string,
+  companyNameRaw: string | null
+): Promise<SearchResultItem> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("people")
+    .insert({ name, company_name_raw: companyNameRaw })
+    .select("id, name, company_name_raw")
+    .single();
+
+  if (error) throw new Error(`担当者の登録に失敗しました: ${error.message}`);
+  return { id: data.id, label: data.name, sublabel: data.company_name_raw };
 }

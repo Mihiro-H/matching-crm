@@ -10,7 +10,7 @@ const TABS = [
   { key: "projects", label: "案件" },
   { key: "estimates", label: "見積・契約" },
   { key: "invoices", label: "請求" },
-  { key: "contacts", label: "担当者履歴" },
+  { key: "people", label: "担当者" },
 ] as const;
 
 export function CompanyDetailShell({

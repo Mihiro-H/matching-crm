@@ -14,13 +14,11 @@ export type Json =
 
 export type UserRole = "sales" | "accounting" | "admin";
 export type PagePermission = "edit" | "view" | "hidden";
-export type CompanyStatus = "negotiating" | "active" | "paused" | "cold";
-export type ContactSource = "form" | "referral" | "other";
+export type DealSource = "form" | "referral" | "other";
 export type JobCategory = "writer" | "photographer" | "marketer" | "designer";
-export type ContactStatus = "new" | "in_progress" | "negotiating" | "won" | "lost";
+export type DealStatus = "new" | "in_progress" | "negotiating" | "on_hold" | "won" | "lost";
 export type ProjectStatus =
-  | "negotiating"
-  | "estimate_submitted"
+  | "won"
   | "contract_sent"
   | "contracted"
   | "in_progress"
@@ -42,8 +40,9 @@ export type ReportFrequency = "weekly" | "monthly";
 export type ReportRunStatus = "success" | "failed";
 export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom" | "misoca";
 export type IntegrationDirection = "inbound" | "outbound";
-export type IntegrationRelatedEntityType = "contact" | "project" | "estimate" | "invoice" | "meeting_note";
+export type IntegrationRelatedEntityType = "deal" | "project" | "estimate" | "invoice" | "meeting_note";
 export type IntegrationLogStatus = "success" | "failed" | "retrying";
+export type FormAnswerType = "text" | "textarea" | "single_select" | "multi_select";
 
 export interface Database {
   public: {
@@ -126,7 +125,6 @@ export interface Database {
           id: string;
           name: string;
           industry: string | null;
-          status: CompanyStatus;
           first_contact_date: string | null;
           platform_account_id: string | null;
           esignature_email: string | null;
@@ -139,7 +137,6 @@ export interface Database {
           id?: string;
           name: string;
           industry?: string | null;
-          status: CompanyStatus;
           first_contact_date?: string | null;
           platform_account_id?: string | null;
           esignature_email?: string | null;
@@ -151,7 +148,8 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["companies"]["Insert"]>;
         Relationships: [];
       };
-      contacts: {
+      // supabase/migrations/20260909090000_deals_people_split.sql
+      people: {
         Row: {
           id: string;
           company_id: string | null;
@@ -159,15 +157,6 @@ export interface Database {
           name: string;
           email: string | null;
           phone: string | null;
-          source: ContactSource;
-          job_categories: JobCategory[];
-          inquiry_body: string | null;
-          status: ContactStatus;
-          lost_reason: string | null;
-          is_current: boolean;
-          assigned_user_id: string | null;
-          started_at: string | null;
-          ended_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -178,30 +167,71 @@ export interface Database {
           name: string;
           email?: string | null;
           phone?: string | null;
-          source: ContactSource;
-          job_categories?: JobCategory[];
-          inquiry_body?: string | null;
-          status: ContactStatus;
-          lost_reason?: string | null;
-          is_current?: boolean;
-          assigned_user_id?: string | null;
-          started_at?: string | null;
-          ended_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["contacts"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["people"]["Insert"]>;
         Relationships: [
           {
-            foreignKeyName: "contacts_company_id_fkey";
+            foreignKeyName: "people_company_id_fkey";
             columns: ["company_id"];
             referencedRelation: "companies";
             referencedColumns: ["id"];
           },
+        ];
+      };
+      // supabase/migrations/20260909090000_deals_people_split.sql (contactsからリネーム)
+      deals: {
+        Row: {
+          id: string;
+          person_id: string;
+          source: DealSource;
+          job_categories: JobCategory[];
+          inquiry_body: string | null;
+          status: DealStatus;
+          lost_reason: string | null;
+          won_reason: string | null;
+          won_at: string | null;
+          assigned_user_id: string | null;
+          custom_fields: Json;
+          form_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          person_id: string;
+          source: DealSource;
+          job_categories?: JobCategory[];
+          inquiry_body?: string | null;
+          status: DealStatus;
+          lost_reason?: string | null;
+          won_reason?: string | null;
+          won_at?: string | null;
+          assigned_user_id?: string | null;
+          custom_fields?: Json;
+          form_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["deals"]["Insert"]>;
+        Relationships: [
           {
-            foreignKeyName: "contacts_assigned_user_id_fkey";
+            foreignKeyName: "deals_person_id_fkey";
+            columns: ["person_id"];
+            referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deals_assigned_user_id_fkey";
             columns: ["assigned_user_id"];
             referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deals_form_id_fkey";
+            columns: ["form_id"];
+            referencedRelation: "form_definitions";
             referencedColumns: ["id"];
           },
         ];
@@ -242,7 +272,7 @@ export interface Database {
           {
             foreignKeyName: "projects_contact_id_fkey";
             columns: ["contact_id"];
-            referencedRelation: "contacts";
+            referencedRelation: "people";
             referencedColumns: ["id"];
           },
         ];
@@ -432,7 +462,6 @@ export interface Database {
         Row: {
           id: string;
           project_id: string | null;
-          contact_id: string | null;
           company_id: string | null;
           title: string;
           meeting_at: string;
@@ -446,7 +475,6 @@ export interface Database {
         Insert: {
           id?: string;
           project_id?: string | null;
-          contact_id?: string | null;
           company_id?: string | null;
           title: string;
           meeting_at: string;
@@ -463,12 +491,6 @@ export interface Database {
             foreignKeyName: "meeting_notes_project_id_fkey";
             columns: ["project_id"];
             referencedRelation: "projects";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "meeting_notes_contact_id_fkey";
-            columns: ["contact_id"];
-            referencedRelation: "contacts";
             referencedColumns: ["id"];
           },
           {
@@ -821,20 +843,73 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["integration_logs"]["Insert"]>;
         Relationships: [];
       };
+      // supabase/migrations/20260908110000_form_builder.sql
+      form_definitions: {
+        Row: {
+          id: string;
+          name: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["form_definitions"]["Insert"]>;
+        Relationships: [];
+      };
+      // supabase/migrations/20260908110000_form_builder.sql
+      form_fields: {
+        Row: {
+          id: string;
+          form_id: string;
+          field_key: string;
+          is_builtin: boolean;
+          label: string;
+          answer_type: FormAnswerType;
+          options: Json | null;
+          is_required: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          form_id: string;
+          field_key: string;
+          is_builtin?: boolean;
+          label: string;
+          answer_type: FormAnswerType;
+          options?: Json | null;
+          is_required?: boolean;
+          sort_order: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["form_fields"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_form_id_fkey";
+            columns: ["form_id"];
+            referencedRelation: "form_definitions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
-      // supabase/migrations/20260902034903_company_list_view.sql
+      // supabase/migrations/20260902034903_company_list_view.sql, updated by
+      // supabase/migrations/20260909090000_deals_people_split.sql (status/担当者列を廃止)
       company_list_view: {
         Row: {
           id: string;
           name: string;
           industry: string | null;
-          status: CompanyStatus;
           created_at: string;
           updated_at: string;
           latest_project_title: string | null;
-          assignee_id: string | null;
-          assignee_name: string | null;
         };
         Relationships: [];
       };
@@ -858,18 +933,17 @@ export interface Database {
         };
         Relationships: [];
       };
-      // supabase/migrations/20260905070000_contact_list_view.sql
-      contact_list_view: {
+      // supabase/migrations/20260905070000_contact_list_view.sql、
+      // supabase/migrations/20260909090000_deals_people_split.sql で deals_list_view に置き換え
+      deals_list_view: {
         Row: {
           id: string;
-          company_id: string | null;
-          company_name: string | null;
+          person_id: string;
           name: string;
-          email: string | null;
-          phone: string | null;
-          source: string;
+          company_name: string | null;
+          source: DealSource;
           job_categories: JobCategory[];
-          status: ContactStatus;
+          status: DealStatus;
           assigned_user_id: string | null;
           assignee_name: string | null;
           created_at: string;

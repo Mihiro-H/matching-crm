@@ -6,29 +6,15 @@ import {
   parseCompaniesListParams,
   type CompanySortColumn,
 } from "@/lib/companies/list-params";
-import { COMPANY_STATUS_META } from "@/lib/status-badges";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
-import { searchUsers } from "@/lib/search-select/actions";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
-import type { CompanyStatus } from "@/lib/supabase/database.types";
 
 const COLUMN_LABELS: Record<CompanySortColumn, string> = {
   name: "企業名",
   industry: "業種",
-  status: "ステータス",
   latest_project: "直近の案件",
-  assignee: "担当者",
 };
-
-const STATUS_FILTER_CHIPS: { label: string; value: CompanyStatus | null }[] = [
-  { label: "すべて", value: null },
-  { label: COMPANY_STATUS_META.negotiating.label, value: "negotiating" },
-  { label: COMPANY_STATUS_META.active.label, value: "active" },
-  { label: COMPANY_STATUS_META.paused.label, value: "paused" },
-  { label: COMPANY_STATUS_META.cold.label, value: "cold" },
-];
 
 export default async function CompaniesPage({
   searchParams,
@@ -36,45 +22,26 @@ export default async function CompaniesPage({
   searchParams: Promise<{
     sort?: string;
     dir?: string;
-    status?: string;
     name?: string;
-    assigneeId?: string;
-    assigneeName?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
 
-  await requirePageAccess("companies");
+  const { canEdit } = await requirePageAccess("companies");
 
   const resolvedParams = await searchParams;
   const params = parseCompaniesListParams(resolvedParams);
   const { companies, error } = await getCompanies(params);
 
-  function hrefFor(overrides: {
-    sort?: CompanySortColumn;
-    status?: CompanyStatus | null;
-    name?: string | null;
-    assigneeId?: string | null;
-    assigneeName?: string | null;
-  }) {
+  function hrefFor(overrides: { sort?: CompanySortColumn; name?: string | null }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
     next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
 
-    const status = "status" in overrides ? overrides.status : params.statusFilter;
-    if (status) next.set("status", status);
-
     const name = "name" in overrides ? overrides.name : params.nameFilter;
     if (name) next.set("name", name);
-
-    const assigneeId = "assigneeId" in overrides ? overrides.assigneeId : params.assigneeFilter?.id;
-    const assigneeName = "assigneeId" in overrides ? overrides.assigneeName : params.assigneeFilter?.name;
-    if (assigneeId && assigneeName) {
-      next.set("assigneeId", assigneeId);
-      next.set("assigneeName", assigneeName);
-    }
 
     return `/companies?${next.toString()}`;
   }
@@ -82,32 +49,16 @@ export default async function CompaniesPage({
   // SortFilterHeaderはクライアントコンポーネントのため、関数(hrefFor)ではなく
   // 素のデータだけを渡す("use server"以外の関数はクライアントへ渡せないため)。
   const currentQuery: Record<string, string> = { sort: params.sortBy, dir: params.sortDir };
-  if (params.statusFilter) currentQuery.status = params.statusFilter;
   if (params.nameFilter) currentQuery.name = params.nameFilter;
-  if (params.assigneeFilter) {
-    currentQuery.assigneeId = params.assigneeFilter.id;
-    currentQuery.assigneeName = params.assigneeFilter.name;
-  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        {STATUS_FILTER_CHIPS.map((chip) => {
-          const isActive = params.statusFilter === chip.value;
-          return (
-            <Link
-              key={chip.label}
-              href={hrefFor({ status: chip.value })}
-              className={`rounded-full px-3 py-1 text-sm ${
-                isActive
-                  ? "bg-primary-500 text-neutral-0"
-                  : "border border-neutral-200 text-neutral-600 hover:bg-page-bg"
-              }`}
-            >
-              {chip.label}
-            </Link>
-          );
-        })}
+      <div className="flex justify-end">
+        {canEdit && (
+          <Link href="/companies/new" className="rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0">
+            +新規作成
+          </Link>
+        )}
       </div>
 
       {error && (
@@ -132,16 +83,7 @@ export default async function CompaniesPage({
                   filter={
                     column === "name"
                       ? { type: "text", value: params.nameFilter, placeholder: "企業名で検索", paramName: "name" }
-                      : column === "assignee"
-                        ? {
-                            type: "person",
-                            value: params.assigneeFilter,
-                            modalTitle: "担当者で絞り込み",
-                            search: searchUsers,
-                            idParamName: "assigneeId",
-                            nameParamName: "assigneeName",
-                          }
-                        : undefined
+                      : undefined
                   }
                 />
               ))}
@@ -156,11 +98,7 @@ export default async function CompaniesPage({
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-neutral-600">{company.industry ?? "-"}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge meta={COMPANY_STATUS_META[company.status as CompanyStatus]} />
-                </td>
                 <td className="px-4 py-3 text-neutral-600">{company.latestProjectTitle ?? "-"}</td>
-                <td className="px-4 py-3 text-neutral-600">{company.assigneeName ?? "-"}</td>
               </tr>
             ))}
             {companies.length === 0 && !error && (

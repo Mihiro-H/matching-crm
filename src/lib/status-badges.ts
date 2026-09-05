@@ -1,10 +1,4 @@
-import type {
-  CompanyStatus,
-  ContactStatus,
-  ContractStatus,
-  PaymentStatus,
-  ProjectStatus,
-} from "./supabase/database.types";
+import type { ContractStatus, DealStatus, PaymentStatus, ProjectStatus } from "./supabase/database.types";
 
 /**
  * DESIGN_TOKENS.md「セマンティックカラー」の4分類。
@@ -22,27 +16,19 @@ export const SEMANTIC_STATUS_CLASSES: Record<SemanticStatus, { bg: string; text:
 
 export type StatusMeta = { label: string; semantic: SemanticStatus };
 
-/** DB_SCHEMA.md: companies.status に対応する表示ラベルと4分類のマッピング */
-export const COMPANY_STATUS_META: Record<CompanyStatus, StatusMeta> = {
-  negotiating: { label: "商談中", semantic: "info" },
-  active: { label: "進行中", semantic: "success" },
-  paused: { label: "一時休止", semantic: "warning" },
-  cold: { label: "コールド", semantic: "danger" },
-};
-
-/** DB_SCHEMA.md: contacts.status(商談・担当者管理画面のパイプライン) */
-export const CONTACT_STATUS_META: Record<ContactStatus, StatusMeta> = {
+/** DB_SCHEMA.md: deals.status(商談管理画面のパイプライン) */
+export const DEAL_STATUS_META: Record<DealStatus, StatusMeta> = {
   new: { label: "未対応", semantic: "info" },
   in_progress: { label: "対応中", semantic: "info" },
   negotiating: { label: "商談中", semantic: "info" },
+  on_hold: { label: "保留", semantic: "warning" },
   won: { label: "受注", semantic: "success" },
   lost: { label: "失注", semantic: "danger" },
 };
 
-/** DB_SCHEMA.md: projects.status (8段階) */
+/** DB_SCHEMA.md: projects.status。案件は商談が受注した時点で初めて作られるため「受注」から始まる。 */
 export const PROJECT_STATUS_META: Record<ProjectStatus, StatusMeta> = {
-  negotiating: { label: "商談中", semantic: "info" },
-  estimate_submitted: { label: "見積提出済", semantic: "info" },
+  won: { label: "受注", semantic: "success" },
   contract_sent: { label: "電子契約送付", semantic: "warning" },
   contracted: { label: "契約済", semantic: "success" },
   in_progress: { label: "進行中", semantic: "success" },

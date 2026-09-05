@@ -8,7 +8,7 @@ type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
 
 async function computeNewContactsCount(admin: SupabaseAdmin, period: ReportPeriod): Promise<number> {
   const { count } = await admin
-    .from("contacts")
+    .from("deals")
     .select("id", { count: "exact", head: true })
     .gte("created_at", period.startIso)
     .lt("created_at", period.endIso);
@@ -20,11 +20,11 @@ async function computeWonCountAndRevenue(
   period: ReportPeriod
 ): Promise<{ count: number; revenue: number }> {
   const { count } = await admin
-    .from("contacts")
+    .from("deals")
     .select("id", { count: "exact", head: true })
     .eq("status", "won")
-    .gte("started_at", period.startIso)
-    .lt("started_at", period.endIso);
+    .gte("won_at", period.startIso)
+    .lt("won_at", period.endIso);
 
   const { data: estimates } = await admin
     .from("estimates")
@@ -56,11 +56,11 @@ async function computeAssigneePerformance(
   period: ReportPeriod
 ): Promise<{ userId: string; userName: string; wonContactsCount: number; revenue: number }[]> {
   const { data: wonContacts } = await admin
-    .from("contacts")
+    .from("deals")
     .select("assigned_user_id")
     .eq("status", "won")
-    .gte("started_at", period.startIso)
-    .lt("started_at", period.endIso)
+    .gte("won_at", period.startIso)
+    .lt("won_at", period.endIso)
     .not("assigned_user_id", "is", null);
 
   const { data: signedEstimates } = await admin

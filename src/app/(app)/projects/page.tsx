@@ -81,12 +81,19 @@ export default async function ProjectsPage({
         ) : (
           <div />
         )}
-        <Link
-          href={otherViewHref}
-          className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-1.5 text-sm text-neutral-600 hover:bg-page-bg"
-        >
-          {params.view === "table" ? "カンバン表示に切り替え" : "テーブル表示に切り替え"}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={otherViewHref}
+            className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-1.5 text-sm text-neutral-600 hover:bg-page-bg"
+          >
+            {params.view === "table" ? "カンバン表示に切り替え" : "テーブル表示に切り替え"}
+          </Link>
+          {canEdit && (
+            <Link href="/projects/new" className="rounded-md bg-primary-500 px-4 py-1.5 text-sm text-neutral-0">
+              +新規作成
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && (

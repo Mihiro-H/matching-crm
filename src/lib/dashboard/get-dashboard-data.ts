@@ -36,7 +36,7 @@ export async function getDashboardData(): Promise<{
     pendingEstimatesResult,
     pendingInvoicesResult,
   ] = await Promise.allSettled([
-    supabase.from("contacts").select("id", { count: "exact", head: true }).eq("status", "new"),
+    supabase.from("deals").select("id", { count: "exact", head: true }).eq("status", "new"),
     supabase.from("projects").select("id", { count: "exact", head: true }).neq("status", "completed"),
     // 「今月の受注額」= 当月中に契約締結(signed)した見積の合計。
     // projects.status が contracted に遷移した日時を直接持つカラムはなく、

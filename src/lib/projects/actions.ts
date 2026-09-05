@@ -44,6 +44,59 @@ export async function updateProjectStatus(
 }
 
 export type MutationResult = { success: true } | { success: false; error: string };
+export type CreateProjectResult = { success: true; id: string } | { success: false; error: string };
+
+/**
+ * 案件管理一覧の「+新規作成」(SCREEN_SPEC.md 4章)。
+ * 「契約済」への遷移はクラウドサインWebhook専用のため、新規作成時のステータスも
+ * updateProjectDetailsと同様にそこへは直接設定できないようガードする。
+ */
+export async function createProject(input: {
+  companyId: string;
+  title: string;
+  budget: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: ProjectStatus;
+}): Promise<CreateProjectResult> {
+  const authCheck = await requireEditAccess("projects");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  if (!input.companyId) {
+    return { success: false, error: "企業を選択してください。" };
+  }
+  if (!input.title.trim()) {
+    return { success: false, error: "案件名を入力してください。" };
+  }
+  if (input.startDate && input.endDate && input.startDate > input.endDate) {
+    return { success: false, error: "開始日は終了日より前の日付にしてください。" };
+  }
+  if (!isManualDropAllowed(input.status)) {
+    return {
+      success: false,
+      error: "「契約済」はクラウドサイン連携によって自動的に設定されます。新規作成時には選択できません。",
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("projects")
+    .insert({
+      company_id: input.companyId,
+      title: input.title.trim(),
+      budget: input.budget,
+      start_date: input.startDate,
+      end_date: input.endDate,
+      status: input.status,
+    })
+    .select("id")
+    .single();
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/projects");
+  return { success: true, id: data.id };
+}
 
 /**
  * 案件詳細ヘッダーの基本項目編集(案件名/予算/納期/ステータス)。

@@ -20,10 +20,12 @@ type Draft = { misocaDocumentId: string; title: string; pdfBase64: string };
 
 /**
  * 案件のステータスによって、見積書作成画面に出せる案件を絞り込む
- * (SCREEN_SPEC.md 5章: 見積書は商談中・見積提出済、納品書は進行中・検収済の案件のみ)。
+ * (SCREEN_SPEC.md 5章: 見積書は受注直後(まだ契約締結前)、納品書は進行中・検収済の
+ * 案件のみ。商談中・見積提出済の段階は商談管理(deals)側に移管したため、
+ * 案件が存在する時点で既に「受注」以降のステータスになる)。
  */
 const PROJECT_STATUSES_BY_DOCUMENT_TYPE: Record<EstimateDocumentType, ProjectStatus[]> = {
-  estimate: ["negotiating", "estimate_submitted"],
+  estimate: ["won"],
   delivery_slip: ["in_progress", "inspected"],
 };
 
