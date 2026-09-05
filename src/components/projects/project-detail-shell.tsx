@@ -45,7 +45,7 @@ export function ProjectDetailShell({
 
       <nav className="flex gap-1 border-b border-neutral-100">
         {TABS.map((tab) => {
-          const href = `/projects/${project.id}/${tab.key}`;
+          const href = `/projects/${project.number}/${tab.key}`;
           const isActive = pathname === href;
           return (
             <Link

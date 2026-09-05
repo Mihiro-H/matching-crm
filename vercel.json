@@ -5,12 +5,12 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/import-meeting-recordings",
-      "schedule": "15 9 * * *"
-    },
-    {
       "path": "/api/cron/sync-misoca-invoices",
       "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/cron/check-stale-estimates",
+      "schedule": "0 10 * * *"
     }
   ]
 }

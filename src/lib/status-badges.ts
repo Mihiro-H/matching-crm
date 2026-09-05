@@ -23,6 +23,7 @@ export const DEAL_STATUS_META: Record<DealStatus, StatusMeta> = {
   negotiating: { label: "商談中", semantic: "info" },
   on_hold: { label: "保留", semantic: "warning" },
   won: { label: "受注", semantic: "success" },
+  estimate_submitted: { label: "見積提出済", semantic: "success" },
   lost: { label: "失注", semantic: "danger" },
 };
 

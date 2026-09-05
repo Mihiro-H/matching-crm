@@ -89,7 +89,7 @@ export default async function FreelancerDetailPage({
                     <td className="px-4 py-3 text-neutral-600">{assignment.companyName}</td>
                     <td className="px-4 py-3">
                       <Link
-                        href={`/projects/${assignment.projectId}`}
+                        href={`/projects/${assignment.projectNumber}`}
                         className="text-primary-600 hover:underline"
                       >
                         {assignment.projectTitle}

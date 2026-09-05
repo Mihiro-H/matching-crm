@@ -7,6 +7,8 @@ import {
   type CompanySortColumn,
 } from "@/lib/companies/list-params";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PAGE_SIZE } from "@/lib/pagination";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 
@@ -23,6 +25,7 @@ export default async function CompaniesPage({
     sort?: string;
     dir?: string;
     name?: string;
+    page?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
@@ -33,15 +36,19 @@ export default async function CompaniesPage({
 
   const resolvedParams = await searchParams;
   const params = parseCompaniesListParams(resolvedParams);
-  const { companies, error } = await getCompanies(params);
+  const { companies, totalCount, error } = await getCompanies(params);
 
-  function hrefFor(overrides: { sort?: CompanySortColumn; name?: string | null }) {
+  function hrefFor(overrides: { sort?: CompanySortColumn; name?: string | null; page?: number }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
     next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
 
     const name = "name" in overrides ? overrides.name : params.nameFilter;
     if (name) next.set("name", name);
+
+    // ソート列を変更した場合は1ページ目に戻す(絞り込み結果が変わるため)。
+    const page = overrides.page ?? (overrides.sort ? 1 : params.page);
+    if (page > 1) next.set("page", String(page));
 
     return `/companies?${next.toString()}`;
   }
@@ -110,6 +117,12 @@ export default async function CompaniesPage({
             )}
           </tbody>
         </table>
+        <PaginationControls
+          page={params.page}
+          totalCount={totalCount}
+          pageSize={PAGE_SIZE}
+          hrefFor={(page) => hrefFor({ page })}
+        />
       </div>
     </div>
   );

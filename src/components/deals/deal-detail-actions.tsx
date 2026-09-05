@@ -63,7 +63,7 @@ export function DealDetailActions({ deal, canEdit }: { deal: DealDetail; canEdit
       return;
     }
     setShowWonForm(false);
-    router.push(`/projects/${result.projectId}`);
+    router.push(`/projects/${result.projectNumber}`);
   }
 
   return (

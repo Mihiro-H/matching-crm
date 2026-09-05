@@ -8,13 +8,14 @@ import type { DealSource, DealStatus, JobCategory } from "@/lib/supabase/databas
 import { getNextStatusOptions } from "./status";
 
 export type MutationResult = { success: true } | { success: false; error: string };
-export type CreateDealResult = { success: true; id: string } | { success: false; error: string };
+export type CreateDealResult = { success: true; id: string; number: number } | { success: false; error: string };
 
 /**
  * 商談管理一覧の「+新規作成」(SCREEN_SPEC.md「商談管理」)。
  * 外部フォームWebhook(/api/webhooks/form)以外から商談を手動で登録する経路。
  * source='form'は実際のフォーム経由専用のため、ここでは選ばせない。
- * 担当者(person)は既存を選ぶか、その場で新規登録する(SearchSelectModal + インライン新規登録)。
+ * 企業担当者(person)は既存を選ぶか、その場で新規登録する(SearchSelectModal + インライン新規登録)。
+ * 主担当・サブ担当もこの画面で登録できる(どちらも任意。後から詳細ページでも変更可能)。
  * 新規リードという扱いは変わらないため、new_lead通知(Slack+案件振り分け担当者への
  * アプリ内通知)も同様に発火させる。
  */
@@ -23,6 +24,8 @@ export async function createDealManual(input: {
   jobCategories: JobCategory[];
   inquiryBody: string | null;
   source: Exclude<DealSource, "form">;
+  primaryAssigneeId: string | null;
+  secondaryAssigneeIds: string[];
 }): Promise<CreateDealResult> {
   const authCheck = await requireEditAccess("deals");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
@@ -40,11 +43,18 @@ export async function createDealManual(input: {
       inquiry_body: input.inquiryBody?.trim() || null,
       source: input.source,
       status: "new",
+      assigned_user_id: input.primaryAssigneeId,
     })
-    .select("id, person:people(name, company_name_raw, company:companies(name))")
+    .select("id, number, person:people(name, company_name_raw, company:companies(name))")
     .single();
 
   if (error) return { success: false, error: error.message };
+
+  // サブ担当は主担当と重複しないぶんだけ登録する(deal_assigneesはサブ担当専用のため)。
+  const secondaryIds = input.secondaryAssigneeIds.filter((id) => id !== input.primaryAssigneeId);
+  if (secondaryIds.length > 0) {
+    await supabase.from("deal_assignees").insert(secondaryIds.map((userId) => ({ deal_id: data.id, user_id: userId })));
+  }
 
   await triggerNotification(
     "new_lead",
@@ -53,7 +63,7 @@ export async function createDealManual(input: {
   );
 
   revalidatePath("/deals");
-  return { success: true, id: data.id };
+  return { success: true, id: data.id, number: data.number };
 }
 
 /**
@@ -135,7 +145,7 @@ export async function markDealLost(dealId: string, lostReason: string): Promise<
 }
 
 export type MarkDealWonResult =
-  | { success: true; projectId: string }
+  | { success: true; projectId: string; projectNumber: number }
   | { success: false; error: string };
 
 /**
@@ -201,15 +211,73 @@ export async function markDealWon(
     .insert({
       company_id: companyId,
       contact_id: person.id,
+      deal_id: dealId,
       title: `${company?.name ?? "新規"}の案件`,
       status: "won",
     })
-    .select("id")
+    .select("id, number")
     .single();
   if (projectError) return { success: false, error: projectError.message };
 
   revalidatePath(`/deals/${dealId}`);
   revalidatePath("/deals");
   revalidatePath("/projects");
-  return { success: true, projectId: project.id };
+  return { success: true, projectId: project.id, projectNumber: project.number };
+}
+
+/**
+ * 主担当を変更する(SCREEN_SPEC.md「商談管理」)。deals.assigned_user_idを直接更新する
+ * (project_assigneesのようなrole付きテーブルではなく単一カラムのため、主担当/サブ担当の
+ * 入れ替えは発生しない。新しい主担当が既にサブ担当としても登録されていた場合は、
+ * 表示が重複しないようそちらから外す)。
+ */
+export async function setDealPrimaryAssignee(dealId: string, userId: string): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("deals");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase.from("deals").update({ assigned_user_id: userId }).eq("id", dealId);
+  if (error) return { success: false, error: error.message };
+
+  await supabase.from("deal_assignees").delete().eq("deal_id", dealId).eq("user_id", userId);
+
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath("/deals");
+  return { success: true };
+}
+
+/**
+ * サブ担当を追加する(SCREEN_SPEC.md「商談管理」)。
+ * 主担当(assigned_user_id)はここでは変更しない。議事録の閲覧範囲(主担当+サブ担当)にも
+ * このテーブルを使う(meeting-notes/visibility.ts参照)。
+ */
+export async function addSecondaryDealAssignee(dealId: string, userId: string): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("deals");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("deal_assignees").insert({ deal_id: dealId, user_id: userId });
+
+  if (error) {
+    const message = error.code === "23505" ? "既にこの商談にアサインされています。" : error.message;
+    return { success: false, error: message };
+  }
+
+  revalidatePath(`/deals/${dealId}`);
+  return { success: true };
+}
+
+/** サブ担当を削除する(SCREEN_SPEC.md「商談管理」) */
+export async function removeDealAssignee(dealId: string, assigneeId: string): Promise<MutationResult> {
+  const authCheck = await requireEditAccess("deals");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("deal_assignees").delete().eq("id", assigneeId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath(`/deals/${dealId}`);
+  return { success: true };
 }

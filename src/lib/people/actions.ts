@@ -15,7 +15,7 @@ export async function createPerson(input: {
   email: string | null;
   phone: string | null;
 }): Promise<CreatePersonResult> {
-  const authCheck = await requireEditAccess("deals");
+  const authCheck = await requireEditAccess("people");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
 
   if (!input.name.trim()) {
@@ -46,7 +46,7 @@ export async function updatePerson(
   personId: string,
   input: { name: string; email: string | null; phone: string | null; companyId: string | null }
 ): Promise<MutationResult> {
-  const authCheck = await requireEditAccess("deals");
+  const authCheck = await requireEditAccess("people");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
 
   if (!input.name.trim()) {

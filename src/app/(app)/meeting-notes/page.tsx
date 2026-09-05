@@ -1,35 +1,55 @@
-import Link from "next/link";
 import { getMeetingNotes, getProjectFilterOptions } from "@/lib/meeting-notes/get-meeting-notes";
-import { formatDateJa } from "@/lib/format";
+import { MeetingNotesTabs } from "@/components/meeting-notes/meeting-notes-tabs";
+import { MeetingNotesTable } from "@/components/meeting-notes/meeting-notes-table";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import { parsePageParam } from "@/lib/pagination";
 
 export default async function MeetingNotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ companyName?: string; projectId?: string; dateFrom?: string; dateTo?: string }>;
+  searchParams: Promise<{
+    companyName?: string;
+    projectId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: string;
+  }>;
 }) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
 
-  await requirePageAccess("meeting_notes");
+  const { canEdit } = await requirePageAccess("meeting_notes");
 
   const params = await searchParams;
+  const page = parsePageParam(params.page);
   const filter = {
     companyNameQuery: params.companyName ?? "",
     projectId: params.projectId || null,
     dateFrom: params.dateFrom || null,
     dateTo: params.dateTo || null,
+    page,
   };
 
-  const [{ notes, error }, projectOptions] = await Promise.all([
+  const [{ notes, totalCount, error }, projectOptions] = await Promise.all([
     getMeetingNotes(filter),
     getProjectFilterOptions(),
   ]);
 
+  // ページネーションのリンク生成用に、現在の絞り込み条件をそのまま維持しつつ
+  // pageだけ差し替える(MeetingNotesTableはクライアントコンポーネントのため、
+  // 関数ではなく素のクエリ文字列を渡す)。
+  const currentQuery: Record<string, string> = {};
+  if (filter.companyNameQuery) currentQuery.companyName = filter.companyNameQuery;
+  if (filter.projectId) currentQuery.projectId = filter.projectId;
+  if (filter.dateFrom) currentQuery.dateFrom = filter.dateFrom;
+  if (filter.dateTo) currentQuery.dateTo = filter.dateTo;
+
   return (
     <div className="flex flex-col gap-4">
+      <MeetingNotesTabs />
+
       <form className="flex flex-wrap items-end gap-3 rounded-lg border border-neutral-200 bg-neutral-0 p-4">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-neutral-600">企業名</span>
@@ -84,44 +104,15 @@ export default async function MeetingNotesPage({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4">
-        {notes.map((note) => (
-          <Link
-            key={note.id}
-            href={`/meeting-notes/${note.id}`}
-            className="rounded-lg border border-neutral-200 bg-neutral-0 p-4 hover:border-primary-500"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-md text-neutral-900">{note.title}</h3>
-              <span className="shrink-0 rounded-sm bg-accent-50 px-2 py-0.5 text-xs text-accent-600">
-                AI自動生成
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-neutral-600">
-              {note.companyName} ・ {formatDateJa(note.meetingAt)}
-            </p>
-            <p className="mt-2 text-sm text-neutral-600">{note.aiSummaryExcerpt}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {note.projectId === null && (
-                <span className="inline-block rounded-sm bg-warning-bg px-2 py-0.5 text-xs text-warning-text">
-                  案件未紐付け
-                </span>
-              )}
-              {note.pendingActionItemCount > 0 && (
-                <span className="inline-block rounded-sm bg-warning-bg px-2 py-0.5 text-xs text-warning-text">
-                  要タスク化 {note.pendingActionItemCount}件
-                </span>
-              )}
-            </div>
-          </Link>
-        ))}
-
-        {notes.length === 0 && !error && (
-          <p className="col-span-3 py-8 text-center text-sm text-neutral-600">
-            該当する議事録はありません。
-          </p>
-        )}
-      </div>
+      {!error && (
+        <MeetingNotesTable
+          notes={notes}
+          canEdit={canEdit}
+          page={page}
+          totalCount={totalCount}
+          currentQuery={currentQuery}
+        />
+      )}
     </div>
   );
 }

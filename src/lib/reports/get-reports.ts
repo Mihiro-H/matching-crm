@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ReportFrequency } from "@/lib/supabase/database.types";
 import { computeNextRunAt } from "./next-run";
+import { rangeForPage } from "@/lib/pagination";
 
 export type ReportListRow = {
   id: string;
@@ -16,17 +17,21 @@ export type ReportListRow = {
  * report_schedules)、作成画面は1レポートにつき1スケジューリングのみを
  * 前提としたUIのため、表示上は最初の1件のみを使う。
  */
-export async function getReports(): Promise<{ reports: ReportListRow[]; error: string | null }> {
+export async function getReports(
+  page: number
+): Promise<{ reports: ReportListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("reports")
     .select(
-      "id, name, report_schedules(frequency, day_of_week, day_of_month, time_of_day, is_active), report_runs(generated_at)"
+      "id, name, report_schedules(frequency, day_of_week, day_of_month, time_of_day, is_active), report_runs(generated_at)",
+      { count: "exact" }
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(...rangeForPage(page));
 
   if (error) {
-    return { reports: [], error: error.message };
+    return { reports: [], totalCount: 0, error: error.message };
   }
 
   const now = new Date();
@@ -59,6 +64,7 @@ export async function getReports(): Promise<{ reports: ReportListRow[]; error: s
         lastRunAt: lastRun?.generated_at ?? null,
       };
     }),
+    totalCount: count ?? 0,
     error: null,
   };
 }

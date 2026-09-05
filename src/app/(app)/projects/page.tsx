@@ -26,6 +26,7 @@ export default async function ProjectsPage({
     title?: string;
     assigneeId?: string;
     assigneeName?: string;
+    page?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
@@ -36,7 +37,7 @@ export default async function ProjectsPage({
 
   const resolvedParams = await searchParams;
   const params = parseProjectsListParams(resolvedParams);
-  const { projects, error } = await getProjects(params);
+  const { projects, totalCount, error } = await getProjects(params);
 
   const otherView = params.view === "table" ? "kanban" : "table";
   const otherViewHref = `/projects?view=${otherView}`;
@@ -102,7 +103,9 @@ export default async function ProjectsPage({
         </div>
       )}
 
-      {!error && params.view === "table" && <ProjectsTable projects={projects} params={params} />}
+      {!error && params.view === "table" && (
+        <ProjectsTable projects={projects} params={params} totalCount={totalCount} />
+      )}
       {!error && params.view === "kanban" && <ProjectsKanban projects={projects} canEdit={canEdit} />}
     </div>
   );

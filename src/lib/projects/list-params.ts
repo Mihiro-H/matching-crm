@@ -1,5 +1,6 @@
 import type { ProjectStatus } from "@/lib/supabase/database.types";
 import { PROJECT_STATUS_ORDER } from "./status-transitions";
+import { parsePageParam } from "@/lib/pagination";
 
 export const PROJECT_VIEWS = ["table", "kanban"] as const;
 export type ProjectView = (typeof PROJECT_VIEWS)[number];
@@ -16,6 +17,7 @@ export type ProjectsListParams = {
   companyNameFilter: string | null;
   titleFilter: string | null;
   assigneeFilter: { id: string; name: string } | null;
+  page: number;
 };
 
 /**
@@ -31,6 +33,7 @@ export function parseProjectsListParams(params: {
   title?: string;
   assigneeId?: string;
   assigneeName?: string;
+  page?: string;
 }): ProjectsListParams {
   const view = PROJECT_VIEWS.includes(params.view as ProjectView)
     ? (params.view as ProjectView)
@@ -53,7 +56,16 @@ export function parseProjectsListParams(params: {
       ? { id: params.assigneeId.trim(), name: params.assigneeName.trim() }
       : null;
 
-  return { view, sortBy, sortDir, statusFilter, companyNameFilter, titleFilter, assigneeFilter };
+  return {
+    view,
+    sortBy,
+    sortDir,
+    statusFilter,
+    companyNameFilter,
+    titleFilter,
+    assigneeFilter,
+    page: parsePageParam(params.page),
+  };
 }
 
 export function nextSortDirection(

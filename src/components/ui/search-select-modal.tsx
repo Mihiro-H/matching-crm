@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { debounce } from "@/lib/debounce";
 import type { SearchResultItem } from "@/lib/search-select/actions";
@@ -127,7 +128,13 @@ export function SearchSelectModal({
     setQuery("");
   }
 
-  return (
+  // ページ内の<form>から呼ばれるケースがある(企業/担当者選択モーダル等)。ポータルを
+  // 使わずインラインでレンダーすると、createNew.render()の中身(CreateCompanyInlineForm
+  // 等、これ自体も<form>)がその外側の<form>にネストしてしまい、ネストされた<form>内の
+  // 送信ボタンを押すとブラウザのネイティブ送信(ページ遷移)が起きてReactのonSubmitが
+  // 効かなくなる不具合が実際に発生した。document.bodyへポータルすることで、
+  // モーダルの中身が常にどの<form>の外側にも置かれるようにして回避する。
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40"
       onClick={(e) => {
@@ -235,6 +242,7 @@ export function SearchSelectModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

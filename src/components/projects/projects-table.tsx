@@ -9,8 +9,10 @@ import type { ProjectListRow } from "@/lib/projects/get-projects";
 import { PROJECT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { searchUsers } from "@/lib/search-select/actions";
 import { formatDateJa } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 const COLUMN_LABELS: Record<ProjectSortColumn, string> = {
   company: "企業名",
@@ -23,11 +25,13 @@ const COLUMN_LABELS: Record<ProjectSortColumn, string> = {
 export function ProjectsTable({
   projects,
   params,
+  totalCount,
 }: {
   projects: ProjectListRow[];
   params: ProjectsListParams;
+  totalCount: number;
 }) {
-  function hrefFor(overrides: { sort?: ProjectSortColumn }) {
+  function hrefFor(overrides: { sort?: ProjectSortColumn; page?: number }) {
     const next = new URLSearchParams();
     next.set("view", params.view);
     next.set("sort", overrides.sort ?? params.sortBy);
@@ -39,6 +43,9 @@ export function ProjectsTable({
       next.set("assigneeId", params.assigneeFilter.id);
       next.set("assigneeName", params.assigneeFilter.name);
     }
+    // ソート列を変更した場合は1ページ目に戻す(絞り込み結果が変わるため)。
+    const page = overrides.page ?? (overrides.sort ? 1 : params.page);
+    if (page > 1) next.set("page", String(page));
     return `/projects?${next.toString()}`;
   }
 
@@ -104,9 +111,13 @@ export function ProjectsTable({
         <tbody>
           {projects.map((project) => (
             <tr key={project.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3 text-neutral-600">{project.companyName}</td>
+              <td className="px-4 py-3 text-neutral-600">
+                <Link href={`/companies/${project.companyId}`} className="text-primary-600 hover:underline">
+                  {project.companyName}
+                </Link>
+              </td>
               <td className="px-4 py-3">
-                <Link href={`/projects/${project.id}`} className="text-primary-600 hover:underline">
+                <Link href={`/projects/${project.number}`} className="text-primary-600 hover:underline">
                   {project.title}
                 </Link>
               </td>
@@ -132,6 +143,12 @@ export function ProjectsTable({
           )}
         </tbody>
       </table>
+      <PaginationControls
+        page={params.page}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hrefFor={(page) => hrefFor({ page })}
+      />
     </div>
   );
 }

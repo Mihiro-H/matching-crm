@@ -11,7 +11,13 @@ describe("parseProjectsListParams", () => {
       companyNameFilter: null,
       titleFilter: null,
       assigneeFilter: null,
+      page: 1,
     });
+  });
+
+  test("accepts a valid page number and falls back to 1 for invalid values", () => {
+    expect(parseProjectsListParams({ page: "2" })).toMatchObject({ page: 2 });
+    expect(parseProjectsListParams({ page: "invalid" })).toMatchObject({ page: 1 });
   });
 
   test("accepts a valid view", () => {

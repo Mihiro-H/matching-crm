@@ -7,6 +7,7 @@ describe("parseCompaniesListParams", () => {
       sortBy: "name",
       sortDir: "asc",
       nameFilter: null,
+      page: 1,
     });
   });
 
@@ -15,7 +16,13 @@ describe("parseCompaniesListParams", () => {
       sortBy: "industry",
       sortDir: "desc",
       nameFilter: null,
+      page: 1,
     });
+  });
+
+  test("accepts a valid page number and falls back to 1 for invalid values", () => {
+    expect(parseCompaniesListParams({ page: "3" })).toMatchObject({ page: 3 });
+    expect(parseCompaniesListParams({ page: "not_a_number" })).toMatchObject({ page: 1 });
   });
 
   test("falls back to defaults for an unrecognized sortBy", () => {

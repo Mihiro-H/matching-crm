@@ -1,3 +1,5 @@
+import { parsePageParam } from "@/lib/pagination";
+
 export const COMPANY_SORTABLE_COLUMNS = ["name", "industry", "latest_project"] as const;
 
 export type CompanySortColumn = (typeof COMPANY_SORTABLE_COLUMNS)[number];
@@ -7,6 +9,7 @@ export type CompaniesListParams = {
   sortBy: CompanySortColumn;
   sortDir: SortDirection;
   nameFilter: string | null;
+  page: number;
 };
 
 /**
@@ -19,6 +22,7 @@ export function parseCompaniesListParams(params: {
   sort?: string;
   dir?: string;
   name?: string;
+  page?: string;
 }): CompaniesListParams {
   const sortBy = COMPANY_SORTABLE_COLUMNS.includes(params.sort as CompanySortColumn)
     ? (params.sort as CompanySortColumn)
@@ -28,7 +32,7 @@ export function parseCompaniesListParams(params: {
 
   const nameFilter = params.name?.trim() || null;
 
-  return { sortBy, sortDir, nameFilter };
+  return { sortBy, sortDir, nameFilter, page: parsePageParam(params.page) };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

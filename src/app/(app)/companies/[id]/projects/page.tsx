@@ -25,7 +25,7 @@ export default async function CompanyProjectsTab({
       {projects.map((project) => (
         <Link
           key={project.id}
-          href={`/projects/${project.id}`}
+          href={`/projects/${project.number}`}
           className="rounded-lg border border-neutral-200 bg-neutral-0 p-4 hover:border-primary-500"
         >
           <div className="flex items-start justify-between">
@@ -35,7 +35,7 @@ export default async function CompanyProjectsTab({
           <dl className="mt-2 flex gap-4 text-xs text-neutral-600">
             {project.budget !== null && (
               <div>
-                <dt className="inline">予算: </dt>
+                <dt className="inline">金額: </dt>
                 <dd className="inline">{formatCurrencyJPY(project.budget)}</dd>
               </div>
             )}

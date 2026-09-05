@@ -9,6 +9,8 @@ export const NOTIFICATION_EVENT_TYPES: { key: NotificationEventType; label: stri
     placeholders: ["{{company_name}}", "{{project_title}}", "{{amount}}"],
   },
   { key: "reminder", label: "リマインド", placeholders: ["{{company_name}}", "{{project_title}}"] },
+  { key: "meeting_note_ready", label: "議事録作成完了", placeholders: ["{{title}}"] },
+  { key: "meeting_note_failed", label: "議事録作成失敗", placeholders: ["{{title}}"] },
 ];
 
 export type NotificationSettingRow = {

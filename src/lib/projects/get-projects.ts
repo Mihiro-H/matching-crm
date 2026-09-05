@@ -1,9 +1,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobCategory, ProjectStatus } from "@/lib/supabase/database.types";
 import type { ProjectsListParams, ProjectSortColumn } from "./list-params";
+import { rangeForPage } from "@/lib/pagination";
 
 export type ProjectListRow = {
   id: string;
+  number: number;
+  companyId: string;
   companyName: string;
   title: string;
   status: ProjectStatus;
@@ -24,20 +27,24 @@ const SORT_COLUMN_MAP: Record<ProjectSortColumn, string> = {
 
 /**
  * 案件管理一覧(SCREEN_SPEC.md 4章)のデータを取得する。
- * テーブルビュー・カンバンビュー共通(カンバンはstatusでグルーピングして使う)。
+ * テーブルビュー・カンバンビュー共通(カンバンはstatusでグルーピングして使うため、
+ * 全件表示が前提。ページネーションはテーブルビューのときのみ適用する)。
  * 列見出しクリックの絞り込み(企業名/案件名テキスト検索、主担当モーダル選択)にも対応する。
  */
 export async function getProjects(
   params: Pick<
     ProjectsListParams,
-    "sortBy" | "sortDir" | "statusFilter" | "companyNameFilter" | "titleFilter" | "assigneeFilter"
+    "view" | "sortBy" | "sortDir" | "statusFilter" | "companyNameFilter" | "titleFilter" | "assigneeFilter" | "page"
   >
-): Promise<{ projects: ProjectListRow[]; error: string | null }> {
+): Promise<{ projects: ProjectListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
 
   let query = supabase
     .from("project_list_view")
-    .select("id, company_name, title, status, budget, start_date, end_date, assignee_name, role_summary")
+    .select(
+      "id, number, company_id, company_name, title, status, budget, start_date, end_date, assignee_name, role_summary",
+      { count: "exact" }
+    )
     .order(SORT_COLUMN_MAP[params.sortBy], { ascending: params.sortDir === "asc" });
 
   if (params.statusFilter) {
@@ -52,16 +59,21 @@ export async function getProjects(
   if (params.assigneeFilter) {
     query = query.eq("assignee_id", params.assigneeFilter.id);
   }
+  if (params.view === "table") {
+    query = query.range(...rangeForPage(params.page));
+  }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
-    return { projects: [], error: error.message };
+    return { projects: [], totalCount: 0, error: error.message };
   }
 
   return {
     projects: (data ?? []).map((row) => ({
       id: row.id,
+      number: row.number,
+      companyId: row.company_id,
       companyName: row.company_name,
       title: row.title,
       status: row.status,
@@ -71,6 +83,7 @@ export async function getProjects(
       assigneeName: row.assignee_name,
       roleSummary: row.role_summary,
     })),
+    totalCount: count ?? 0,
     error: null,
   };
 }

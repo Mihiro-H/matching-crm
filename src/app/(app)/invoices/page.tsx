@@ -6,15 +6,23 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PAGE_SIZE, parsePageParam } from "@/lib/pagination";
 
-export default async function InvoicesPage() {
+export default async function InvoicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
 
   const { canEdit } = await requirePageAccess("invoices");
 
-  const { invoices, error } = await getInvoices();
+  const resolvedParams = await searchParams;
+  const page = parsePageParam(resolvedParams.page);
+  const { invoices, totalCount, error } = await getInvoices(page);
   const misocaStatus = await getMisocaConnectionStatus();
 
   return (
@@ -81,6 +89,12 @@ export default async function InvoicesPage() {
             )}
           </tbody>
         </table>
+        <PaginationControls
+          page={page}
+          totalCount={totalCount}
+          pageSize={PAGE_SIZE}
+          hrefFor={(p) => (p > 1 ? `/invoices?page=${p}` : "/invoices")}
+        />
       </div>
     </div>
   );

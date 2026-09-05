@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { CompaniesListParams } from "./list-params";
+import { rangeForPage } from "@/lib/pagination";
 
 export type CompanyListRow = {
   id: string;
@@ -21,22 +22,24 @@ const SORT_COLUMN_MAP: Record<CompaniesListParams["sortBy"], string> = {
  */
 export async function getCompanies(
   params: CompaniesListParams
-): Promise<{ companies: CompanyListRow[]; error: string | null }> {
+): Promise<{ companies: CompanyListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
 
   let query = supabase
     .from("company_list_view")
-    .select("id, name, industry, latest_project_title")
+    .select("id, name, industry, latest_project_title", { count: "exact" })
     .order(SORT_COLUMN_MAP[params.sortBy], { ascending: params.sortDir === "asc" });
 
   if (params.nameFilter) {
     query = query.ilike("name", `%${params.nameFilter}%`);
   }
 
-  const { data, error } = await query;
+  query = query.range(...rangeForPage(params.page));
+
+  const { data, error, count } = await query;
 
   if (error) {
-    return { companies: [], error: error.message };
+    return { companies: [], totalCount: 0, error: error.message };
   }
 
   return {
@@ -46,6 +49,7 @@ export async function getCompanies(
       industry: row.industry,
       latestProjectTitle: row.latest_project_title,
     })),
+    totalCount: count ?? 0,
     error: null,
   };
 }

@@ -44,20 +44,25 @@ export async function updateProjectStatus(
 }
 
 export type MutationResult = { success: true } | { success: false; error: string };
-export type CreateProjectResult = { success: true; id: string } | { success: false; error: string };
+export type CreateProjectResult = { success: true; id: string; number: number } | { success: false; error: string };
 
 /**
  * 案件管理一覧の「+新規作成」(SCREEN_SPEC.md 4章)。
  * 「契約済」への遷移はクラウドサインWebhook専用のため、新規作成時のステータスも
  * updateProjectDetailsと同様にそこへは直接設定できないようガードする。
+ * 企業担当者(contact)・主担当・サブ担当もこの画面で登録できる(いずれも任意。
+ * 後から詳細ページでも変更可能)。
  */
 export async function createProject(input: {
   companyId: string;
+  contactId: string | null;
   title: string;
   budget: number | null;
   startDate: string | null;
   endDate: string | null;
   status: ProjectStatus;
+  primaryAssigneeId: string | null;
+  secondaryAssigneeIds: string[];
 }): Promise<CreateProjectResult> {
   const authCheck = await requireEditAccess("projects");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
@@ -83,23 +88,36 @@ export async function createProject(input: {
     .from("projects")
     .insert({
       company_id: input.companyId,
+      contact_id: input.contactId,
       title: input.title.trim(),
       budget: input.budget,
       start_date: input.startDate,
       end_date: input.endDate,
       status: input.status,
     })
-    .select("id")
+    .select("id, number")
     .single();
 
   if (error) return { success: false, error: error.message };
 
+  const assigneeRows: { project_id: string; user_id: string; role: "primary" | "secondary" }[] = [];
+  if (input.primaryAssigneeId) {
+    assigneeRows.push({ project_id: data.id, user_id: input.primaryAssigneeId, role: "primary" });
+  }
+  for (const userId of input.secondaryAssigneeIds) {
+    if (userId === input.primaryAssigneeId) continue;
+    assigneeRows.push({ project_id: data.id, user_id: userId, role: "secondary" });
+  }
+  if (assigneeRows.length > 0) {
+    await supabase.from("project_assignees").insert(assigneeRows);
+  }
+
   revalidatePath("/projects");
-  return { success: true, id: data.id };
+  return { success: true, id: data.id, number: data.number };
 }
 
 /**
- * 案件詳細ヘッダーの基本項目編集(案件名/予算/納期/ステータス)。
+ * 案件詳細ヘッダーの基本項目編集(案件名/金額/納期/ステータス)。
  * `contracted`への変更はupdateProjectStatusと同様にクラウドサインWebhook専用のため
  * ここでも拒否する(手動フォームを経由しても迂回できないようにする)。ただし既に
  * contractedの案件で他の項目だけ編集する場合(ステータス自体は変えない)は許可する。

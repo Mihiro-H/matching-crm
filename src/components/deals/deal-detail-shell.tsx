@@ -4,22 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
 import { DealInfoSection } from "./deal-info-section";
+import { DealAssigneeSection } from "./deal-assignee-section";
 import { DealDetailActions } from "./deal-detail-actions";
 import { DealFormAnswers } from "./deal-form-answers";
 import type { DealDetail, DealFormAnswer } from "@/lib/deals/get-deal";
+import type { DealSecondaryAssignee } from "@/lib/deals/get-deal-assignees";
 
-const TABS = [{ key: "meeting-notes", label: "関連議事録" }] as const;
+const TABS = [{ key: "meeting-notes", label: "議事録" }] as const;
 
 export function DealDetailShell({
   dealId,
+  dealNumber,
   deal,
   formAnswers,
+  secondaryAssignees,
   canEdit,
   children,
 }: {
   dealId: string;
+  dealNumber: number;
   deal: DealDetail;
   formAnswers: DealFormAnswer[];
+  secondaryAssignees: DealSecondaryAssignee[];
   canEdit: boolean;
   children: React.ReactNode;
 }) {
@@ -30,12 +36,18 @@ export function DealDetailShell({
   return (
     <div className="flex flex-col gap-4">
       <DealInfoSection deal={deal} canEdit={canEdit} />
+      <DealAssigneeSection
+        dealId={dealId}
+        primaryAssigneeName={deal.assigneeName}
+        initialSecondaryAssignees={secondaryAssignees}
+        canEdit={canEdit}
+      />
       <DealFormAnswers answers={formAnswers} />
       <DealDetailActions deal={deal} canEdit={canEdit} />
 
       <nav className="flex gap-1 border-b border-neutral-100">
         {TABS.map((tab) => {
-          const href = `/deals/${dealId}/${tab.key}`;
+          const href = `/deals/${dealNumber}/${tab.key}`;
           const isActive = pathname === href;
           return (
             <Link

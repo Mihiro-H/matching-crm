@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { JobCategory } from "@/lib/supabase/database.types";
 import type { FreelancersListParams } from "./list-params";
+import { rangeForPage } from "@/lib/pagination";
 
 export type FreelancerListRow = {
   id: string;
@@ -21,12 +22,14 @@ export type FreelancerListRow = {
  */
 export async function getFreelancers(
   params: FreelancersListParams
-): Promise<{ freelancers: FreelancerListRow[]; error: string | null }> {
+): Promise<{ freelancers: FreelancerListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
 
   let query = supabase
     .from("freelancer_list_view")
-    .select("id, platform_freelancer_id, name, email, job_categories, last_imported_at, active_project_count")
+    .select("id, platform_freelancer_id, name, email, job_categories, last_imported_at, active_project_count", {
+      count: "exact",
+    })
     .order(params.sortBy, { ascending: params.sortDir === "asc" });
 
   if (params.jobCategoryFilter) {
@@ -42,10 +45,12 @@ export async function getFreelancers(
     query = query.ilike("email", `%${params.emailFilter}%`);
   }
 
-  const { data, error } = await query;
+  query = query.range(...rangeForPage(params.page));
+
+  const { data, error, count } = await query;
 
   if (error) {
-    return { freelancers: [], error: error.message };
+    return { freelancers: [], totalCount: 0, error: error.message };
   }
 
   return {
@@ -58,6 +63,7 @@ export async function getFreelancers(
       lastImportedAt: row.last_imported_at,
       activeProjectCount: row.active_project_count,
     })),
+    totalCount: count ?? 0,
     error: null,
   };
 }

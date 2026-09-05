@@ -10,7 +10,13 @@ describe("parseDealsListParams", () => {
       companyNameFilter: null,
       nameFilter: null,
       assigneeFilter: null,
+      page: 1,
     });
+  });
+
+  test("accepts a valid page number and falls back to 1 for invalid values", () => {
+    expect(parseDealsListParams({ page: "3" })).toMatchObject({ page: 3 });
+    expect(parseDealsListParams({ page: "not_a_number" })).toMatchObject({ page: 1 });
   });
 
   test("accepts a valid sortBy and sortDir", () => {

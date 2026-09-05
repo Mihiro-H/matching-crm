@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { getProjectEstimates } from "@/lib/projects/get-project-estimates";
+import { resolveProjectId } from "@/lib/projects/resolve-project-id";
 import { CONTRACT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
@@ -10,7 +12,10 @@ export default async function ProjectEstimatesTab({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: numberParam } = await params;
+  const id = await resolveProjectId(numberParam);
+  if (!id) notFound();
+
   const { estimates, error } = await getProjectEstimates(id);
 
   if (error) {

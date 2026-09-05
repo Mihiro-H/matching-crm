@@ -4,6 +4,7 @@ import type { Database } from "@/lib/supabase/database.types";
 export type InvoiceDetail = Database["public"]["Tables"]["invoices"]["Row"] & {
   companyName: string;
   projectTitle: string;
+  projectNumber: number;
 };
 
 export type PaymentStatusLogEntry = {
@@ -16,7 +17,7 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("invoices")
-    .select("*, company:companies(name), project:projects(title)")
+    .select("*, company:companies(name), project:projects(title, number)")
     .eq("id", id)
     .maybeSingle();
 
@@ -30,6 +31,7 @@ export async function getInvoiceById(id: string): Promise<InvoiceDetail | null> 
     ...invoice,
     companyName: company?.name ?? "(企業不明)",
     projectTitle: project?.title ?? "(案件不明)",
+    projectNumber: project?.number ?? 0,
   };
 }
 

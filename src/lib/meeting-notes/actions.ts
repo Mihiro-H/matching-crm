@@ -4,8 +4,11 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireEditAccess } from "@/lib/auth/require-edit";
 import { parseActionItems, toggleActionItem, type ActionItem } from "./action-items";
+import { buildFlatSummaryExcerpt } from "./summary-excerpt";
+import type { SummarySections } from "./summary-sections";
 
 export type MutationResult = { success: true; actionItems: ActionItem[] } | { success: false; error: string };
+export type SimpleMutationResult = { success: true } | { success: false; error: string };
 
 /**
  * アクションアイテムの完了/未完了をトグルする(SCREEN_SPEC.md 6章)。
@@ -41,54 +44,59 @@ export async function toggleMeetingNoteActionItem(
   return { success: true, actionItems: updated };
 }
 
-export type LinkProjectResult = { success: true } | { success: false; error: string };
-
 /**
- * Drive自動取り込み(source=upload)で企業までは特定できたが案件が未確定の議事録に、
- * 人が手動で案件を紐づける(SCREEN_SPEC.md 6章「議事録自動取り込み」)。
- *
- * UI(LinkProjectSection)はsearchProjectsByCompanyで議事録の企業配下の案件しか
- * 選ばせないが、Server Actionは直接呼び出せてしまうため、UI側の絞り込みに頼らず
- * サーバー側でも「案件の企業 = 議事録の企業」であることと、二重紐付けでないことを
- * 必ず検証する。
+ * 議事録の基本項目(タイトル・会議日時・AI要約の3分類)を手動編集する
+ * (SCREEN_SPEC.md 6章「議事録の編集・削除」)。AIの要約が実態と違う場合の手直し用。
+ * ai_summary(一覧カードの抜粋表示用の平文)も編集後の内容から作り直す。
+ * 文字起こし全文(transcript_text)は事実の記録のため編集対象にしない。
  */
-export async function linkProjectToMeetingNote(
+export async function updateMeetingNote(
   meetingNoteId: string,
-  projectId: string
-): Promise<LinkProjectResult> {
+  input: { title: string; meetingAt: string; sections: SummarySections }
+): Promise<SimpleMutationResult> {
   const authCheck = await requireEditAccess("meeting_notes");
   if (!authCheck.ok) return { success: false, error: authCheck.error };
 
+  const title = input.title.trim();
+  if (!title) return { success: false, error: "タイトルを入力してください。" };
+  if (!input.meetingAt) return { success: false, error: "会議日時を入力してください。" };
+
   const supabase = await createSupabaseServerClient();
 
-  const { data: note, error: noteError } = await supabase
+  const { data: current, error: fetchError } = await supabase
     .from("meeting_notes")
-    .select("id, project_id, company_id")
+    .select("transcript_text")
     .eq("id", meetingNoteId)
     .maybeSingle();
-  if (noteError) return { success: false, error: noteError.message };
-  if (!note || note.project_id !== null || !note.company_id) {
-    return { success: false, error: "対象の議事録が見つからないか、既に案件が紐付け済みです。" };
-  }
-
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("id, company_id")
-    .eq("id", projectId)
-    .maybeSingle();
-  if (projectError) return { success: false, error: projectError.message };
-  if (!project || project.company_id !== note.company_id) {
-    return { success: false, error: "この議事録には紐付けられない案件です(企業が一致しません)。" };
-  }
+  if (fetchError) return { success: false, error: fetchError.message };
+  if (!current) return { success: false, error: "議事録が見つかりません。" };
 
   const { error } = await supabase
     .from("meeting_notes")
-    .update({ project_id: projectId })
-    .eq("id", meetingNoteId)
-    .is("project_id", null);
+    .update({
+      title,
+      meeting_at: input.meetingAt,
+      ai_summary_sections: input.sections,
+      ai_summary: buildFlatSummaryExcerpt(input.sections, current.transcript_text ?? ""),
+    })
+    .eq("id", meetingNoteId);
 
   if (error) return { success: false, error: error.message };
 
   revalidatePath(`/meeting-notes/${meetingNoteId}`);
+  revalidatePath("/meeting-notes");
+  return { success: true };
+}
+
+/** 議事録の削除(SCREEN_SPEC.md 6章「議事録の編集・削除」)。取り消せないため呼び出し側で確認を挟むこと。 */
+export async function deleteMeetingNote(meetingNoteId: string): Promise<SimpleMutationResult> {
+  const authCheck = await requireEditAccess("meeting_notes");
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("meeting_notes").delete().eq("id", meetingNoteId);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/meeting-notes");
   return { success: true };
 }

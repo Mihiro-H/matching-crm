@@ -22,6 +22,7 @@ export default async function EstimatesPage({
     documentType?: string;
     companyName?: string;
     projectTitle?: string;
+    page?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
@@ -32,7 +33,7 @@ export default async function EstimatesPage({
 
   const resolvedParams = await searchParams;
   const params = parseEstimatesListParams(resolvedParams);
-  const { estimates, error } = await getEstimates(params);
+  const { estimates, totalCount, error } = await getEstimates(params);
 
   function chipHref(documentType: EstimateDocumentType | null) {
     const next = new URLSearchParams();
@@ -81,7 +82,7 @@ export default async function EstimatesPage({
         </div>
       )}
 
-      {!error && <EstimatesTable estimates={estimates} params={params} />}
+      {!error && <EstimatesTable estimates={estimates} params={params} totalCount={totalCount} />}
     </div>
   );
 }

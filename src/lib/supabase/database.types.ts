@@ -16,7 +16,14 @@ export type UserRole = "sales" | "accounting" | "admin";
 export type PagePermission = "edit" | "view" | "hidden";
 export type DealSource = "form" | "referral" | "other";
 export type JobCategory = "writer" | "photographer" | "marketer" | "designer";
-export type DealStatus = "new" | "in_progress" | "negotiating" | "on_hold" | "won" | "lost";
+export type DealStatus =
+  | "new"
+  | "in_progress"
+  | "negotiating"
+  | "on_hold"
+  | "won"
+  | "estimate_submitted"
+  | "lost";
 export type ProjectStatus =
   | "won"
   | "contract_sent"
@@ -29,13 +36,15 @@ export type AssigneeRole = "primary" | "secondary";
 export type EstimateDocumentType = "estimate" | "delivery_slip";
 export type ContractStatus = "draft" | "sent" | "signed" | "rejected";
 export type MeetingNoteSource = "zoom" | "upload" | "manual";
-export type DriveMeetingImportStatus = "submitted" | "completed" | "failed";
+export type MeetingUploadStatus = "submitted" | "completed" | "failed";
 export type PaymentStatus = "not_invoiced" | "invoiced" | "unpaid" | "paid";
 export type NotificationEventType =
   | "new_lead"
   | "contract_signed"
   | "payment_confirmed"
-  | "reminder";
+  | "reminder"
+  | "meeting_note_ready"
+  | "meeting_note_failed";
 export type ReportFrequency = "weekly" | "monthly";
 export type ReportRunStatus = "success" | "failed";
 export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom" | "misoca";
@@ -184,6 +193,9 @@ export interface Database {
       deals: {
         Row: {
           id: string;
+          // supabase/migrations/20260910130000_deal_project_short_numbers.sql
+          // URL用の短い連番(generated always as identityのためInsertには含めない)。
+          number: number;
           person_id: string;
           source: DealSource;
           job_categories: JobCategory[];
@@ -195,6 +207,8 @@ export interface Database {
           assigned_user_id: string | null;
           custom_fields: Json;
           form_id: string | null;
+          estimate_submitted_at: string | null;
+          stale_estimate_notified_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -211,6 +225,8 @@ export interface Database {
           assigned_user_id?: string | null;
           custom_fields?: Json;
           form_id?: string | null;
+          estimate_submitted_at?: string | null;
+          stale_estimate_notified_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -236,11 +252,45 @@ export interface Database {
           },
         ];
       };
+      // supabase/migrations/20260910100000_deal_estimate_submitted_and_assignees.sql
+      // 主担当は既存のdeals.assigned_user_idのまま。ここにはサブ担当のみ入る。
+      deal_assignees: {
+        Row: {
+          id: string;
+          deal_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          deal_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["deal_assignees"]["Insert"]>;
+        Relationships: [
+          {
+            foreignKeyName: "deal_assignees_deal_id_fkey";
+            columns: ["deal_id"];
+            referencedRelation: "deals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "deal_assignees_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       projects: {
         Row: {
           id: string;
+          // supabase/migrations/20260910130000_deal_project_short_numbers.sql
+          number: number;
           company_id: string;
           contact_id: string | null;
+          deal_id: string | null;
           title: string;
           budget: number | null;
           start_date: string | null;
@@ -253,6 +303,7 @@ export interface Database {
           id?: string;
           company_id: string;
           contact_id?: string | null;
+          deal_id?: string | null;
           title: string;
           budget?: number | null;
           start_date?: string | null;
@@ -273,6 +324,12 @@ export interface Database {
             foreignKeyName: "projects_contact_id_fkey";
             columns: ["contact_id"];
             referencedRelation: "people";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "projects_deal_id_fkey";
+            columns: ["deal_id"];
+            referencedRelation: "deals";
             referencedColumns: ["id"];
           },
         ];
@@ -462,12 +519,16 @@ export interface Database {
         Row: {
           id: string;
           project_id: string | null;
-          company_id: string | null;
+          // supabase/migrations/20260910090000_meeting_upload_and_deal_links.sql (company_idから置き換え)
+          deal_id: string | null;
           title: string;
           meeting_at: string;
           source: MeetingNoteSource;
           transcript_url: string | null;
           ai_summary: string;
+          // supabase/migrations/20260910120000_meeting_note_summary_sections.sql
+          ai_summary_sections: Json | null;
+          transcript_text: string | null;
           action_items: Json;
           created_by: string;
           created_at: string;
@@ -475,12 +536,14 @@ export interface Database {
         Insert: {
           id?: string;
           project_id?: string | null;
-          company_id?: string | null;
+          deal_id?: string | null;
           title: string;
           meeting_at: string;
           source: MeetingNoteSource;
           transcript_url?: string | null;
           ai_summary: string;
+          ai_summary_sections?: Json | null;
+          transcript_text?: string | null;
           action_items?: Json;
           created_by: string;
           created_at?: string;
@@ -494,9 +557,9 @@ export interface Database {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "meeting_notes_company_id_fkey";
-            columns: ["company_id"];
-            referencedRelation: "companies";
+            foreignKeyName: "meeting_notes_deal_id_fkey";
+            columns: ["deal_id"];
+            referencedRelation: "deals";
             referencedColumns: ["id"];
           },
           {
@@ -507,45 +570,60 @@ export interface Database {
           },
         ];
       };
-      drive_meeting_imports: {
+      // supabase/migrations/20260910090000_meeting_upload_and_deal_links.sql
+      meeting_note_uploads: {
         Row: {
           id: string;
-          drive_file_id: string;
-          drive_file_name: string;
-          drive_file_web_view_link: string | null;
-          matched_company_id: string | null;
+          title: string;
+          meeting_at: string;
+          project_id: string | null;
+          deal_id: string | null;
           assemblyai_transcript_id: string | null;
-          status: DriveMeetingImportStatus;
+          status: MeetingUploadStatus;
           meeting_note_id: string | null;
           error_message: string | null;
+          created_by: string;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          drive_file_id: string;
-          drive_file_name: string;
-          drive_file_web_view_link?: string | null;
-          matched_company_id?: string | null;
+          title: string;
+          meeting_at: string;
+          project_id?: string | null;
+          deal_id?: string | null;
           assemblyai_transcript_id?: string | null;
-          status: DriveMeetingImportStatus;
+          status?: MeetingUploadStatus;
           meeting_note_id?: string | null;
           error_message?: string | null;
+          created_by: string;
           created_at?: string;
           updated_at?: string;
         };
-        Update: Partial<Database["public"]["Tables"]["drive_meeting_imports"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["meeting_note_uploads"]["Insert"]>;
         Relationships: [
           {
-            foreignKeyName: "drive_meeting_imports_matched_company_id_fkey";
-            columns: ["matched_company_id"];
-            referencedRelation: "companies";
+            foreignKeyName: "meeting_note_uploads_project_id_fkey";
+            columns: ["project_id"];
+            referencedRelation: "projects";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "drive_meeting_imports_meeting_note_id_fkey";
+            foreignKeyName: "meeting_note_uploads_deal_id_fkey";
+            columns: ["deal_id"];
+            referencedRelation: "deals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meeting_note_uploads_meeting_note_id_fkey";
             columns: ["meeting_note_id"];
             referencedRelation: "meeting_notes";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "meeting_note_uploads_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "users";
             referencedColumns: ["id"];
           },
         ];
@@ -930,6 +1008,8 @@ export interface Database {
           assignee_id: string | null;
           assignee_name: string | null;
           role_summary: { job_category: JobCategory; headcount: number }[];
+          // supabase/migrations/20260910130000_deal_project_short_numbers.sql
+          number: number;
         };
         Relationships: [];
       };
@@ -948,6 +1028,10 @@ export interface Database {
           assignee_name: string | null;
           created_at: string;
           updated_at: string;
+          // supabase/migrations/20260910090000_meeting_upload_and_deal_links.sql
+          company_id: string | null;
+          // supabase/migrations/20260910130000_deal_project_short_numbers.sql
+          number: number;
         };
         Relationships: [];
       };
@@ -963,6 +1047,8 @@ export interface Database {
           project_title: string;
           company_id: string;
           company_name: string;
+          // supabase/migrations/20260910130000_deal_project_short_numbers.sql
+          project_number: number;
         };
         Relationships: [];
       };

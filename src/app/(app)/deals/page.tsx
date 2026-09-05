@@ -6,13 +6,14 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import type { DealStatus } from "@/lib/supabase/database.types";
 
-// SCREEN_SPEC.md「商談管理」: ステータスフィルターのチップ(すべて/未対応/対応中/商談中/保留)
+// SCREEN_SPEC.md「商談管理」: ステータスフィルターのチップ(すべて/未対応/対応中/商談中/保留/見積提出済)
 const STATUS_FILTER_CHIPS: { label: string; value: DealStatus | null }[] = [
   { label: "すべて", value: null },
   { label: "未対応", value: "new" },
   { label: "対応中", value: "in_progress" },
   { label: "商談中", value: "negotiating" },
   { label: "保留", value: "on_hold" },
+  { label: "見積提出済", value: "estimate_submitted" },
 ];
 
 export default async function DealsPage({
@@ -26,6 +27,7 @@ export default async function DealsPage({
     name?: string;
     assigneeId?: string;
     assigneeName?: string;
+    page?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
@@ -36,7 +38,7 @@ export default async function DealsPage({
 
   const resolvedParams = await searchParams;
   const params = parseDealsListParams(resolvedParams);
-  const { deals, error } = await getDeals(params);
+  const { deals, totalCount, error } = await getDeals(params);
 
   return (
     <div className="flex flex-col gap-4">
@@ -83,7 +85,7 @@ export default async function DealsPage({
         </div>
       )}
 
-      {!error && <DealsTable deals={deals} params={params} />}
+      {!error && <DealsTable deals={deals} params={params} totalCount={totalCount} />}
     </div>
   );
 }

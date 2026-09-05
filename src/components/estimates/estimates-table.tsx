@@ -9,7 +9,9 @@ import type { EstimateListRow } from "@/lib/estimates/get-estimates";
 import { CONTRACT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 const COLUMN_LABELS: Record<EstimateSortColumn, string> = {
   company_name: "企業名",
@@ -25,17 +27,22 @@ const DOCUMENT_TYPE_LABELS = { estimate: "見積書", delivery_slip: "納品書"
 export function EstimatesTable({
   estimates,
   params,
+  totalCount,
 }: {
   estimates: EstimateListRow[];
   params: EstimatesListParams;
+  totalCount: number;
 }) {
-  function hrefFor(overrides: { sort?: EstimateSortColumn }) {
+  function hrefFor(overrides: { sort?: EstimateSortColumn; page?: number }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
     next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
     if (params.documentTypeFilter) next.set("documentType", params.documentTypeFilter);
     if (params.companyNameFilter) next.set("companyName", params.companyNameFilter);
     if (params.projectTitleFilter) next.set("projectTitle", params.projectTitleFilter);
+    // ソート列を変更した場合は1ページ目に戻す(絞り込み結果が変わるため)。
+    const page = overrides.page ?? (overrides.sort ? 1 : params.page);
+    if (page > 1) next.set("page", String(page));
     return `/estimates?${next.toString()}`;
   }
 
@@ -90,7 +97,7 @@ export function EstimatesTable({
                 </Link>
               </td>
               <td className="px-4 py-3 text-neutral-900">
-                <Link href={`/projects/${estimate.projectId}`} className="text-primary-600 hover:underline">
+                <Link href={`/projects/${estimate.projectNumber}`} className="text-primary-600 hover:underline">
                   {estimate.projectTitle}
                 </Link>
               </td>
@@ -111,6 +118,12 @@ export function EstimatesTable({
           )}
         </tbody>
       </table>
+      <PaginationControls
+        page={params.page}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hrefFor={(page) => hrefFor({ page })}
+      />
     </div>
   );
 }

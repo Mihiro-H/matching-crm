@@ -81,6 +81,26 @@ export async function searchCompanies(query: string): Promise<SearchResultItem[]
   return (data ?? []).map((row) => ({ id: row.id, label: row.name, sublabel: row.industry }));
 }
 
+/** 商談選択(SCREEN_SPEC.md 6章「議事録アップロード」: 関連する商談を選ぶ) */
+export async function searchDeals(query: string): Promise<SearchResultItem[]> {
+  const supabase = await createSupabaseServerClient();
+  let request = supabase
+    .from("deals_list_view")
+    .select("id, name, company_name")
+    .order("created_at", { ascending: false })
+    .limit(SEARCH_LIMIT);
+  if (query.trim()) {
+    request = request.ilike("name", `%${query.trim()}%`);
+  }
+  const { data, error } = await request;
+  if (error) throw new Error(`商談の検索に失敗しました: ${error.message}`);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    label: row.name,
+    sublabel: row.company_name,
+  }));
+}
+
 /** 案件選択(SCREEN_SPEC.md 5章「見積・発注」作成画面: 案件を選択すると企業は自動入力) */
 export async function searchProjects(query: string): Promise<SearchResultItem[]> {
   const supabase = await createSupabaseServerClient();
@@ -192,21 +212,22 @@ export async function searchPeople(query: string): Promise<SearchResultItem[]> {
 }
 
 /**
- * 担当者選択モーダルからのインライン新規登録(商談作成画面: SCREEN_SPEC.md「商談管理」)。
- * 企業はここでは仮の名前(自由入力)のみ受け付ける(正式な企業への紐付けは
- * 担当者詳細ページ/people/[id]で行う、CreateCompanyInlineFormと同じ簡易入力方針)。
+ * 企業担当者選択モーダルからのインライン新規登録(商談・案件作成画面: SCREEN_SPEC.md
+ * 「商談管理」「案件管理」)。企業は既存企業を選ぶか、その場でCreateCompanyInlineForm経由
+ * で新規登録した企業をcompany_idとして正式に紐付ける(以前は自由入力のcompany_name_rawの
+ * みだったが、企業選択モーダルを使う形に統一した)。
  */
 export async function createPersonInline(
   name: string,
-  companyNameRaw: string | null
+  companyId: string | null
 ): Promise<SearchResultItem> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("people")
-    .insert({ name, company_name_raw: companyNameRaw })
-    .select("id, name, company_name_raw")
+    .insert({ name, company_id: companyId })
+    .select("id, name, company_name_raw, company:companies(name)")
     .single();
 
   if (error) throw new Error(`担当者の登録に失敗しました: ${error.message}`);
-  return { id: data.id, label: data.name, sublabel: data.company_name_raw };
+  return { id: data.id, label: data.name, sublabel: data.company?.name ?? data.company_name_raw };
 }

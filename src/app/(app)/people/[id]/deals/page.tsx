@@ -33,7 +33,7 @@ export default async function PersonDealsTab({
           {deals.map((deal) => (
             <tr key={deal.id} className="border-b border-neutral-100 last:border-0">
               <td className="px-4 py-3">
-                <Link href={`/deals/${deal.id}`} className="inline-block">
+                <Link href={`/deals/${deal.number}`} className="inline-block">
                   <StatusBadge meta={DEAL_STATUS_META[deal.status]} />
                 </Link>
               </td>

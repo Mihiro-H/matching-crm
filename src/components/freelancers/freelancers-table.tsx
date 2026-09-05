@@ -8,7 +8,9 @@ import {
 import type { FreelancerListRow } from "@/lib/freelancers/get-freelancers";
 import { JOB_CATEGORY_LABELS, JOB_CATEGORY_TAG_STYLES } from "@/lib/job-categories";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { formatDateTimeJa } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 const COLUMN_LABELS: Record<FreelancerSortColumn, string> = {
   platform_freelancer_id: "ID",
@@ -21,11 +23,13 @@ const COLUMN_LABELS: Record<FreelancerSortColumn, string> = {
 export function FreelancersTable({
   freelancers,
   params,
+  totalCount,
 }: {
   freelancers: FreelancerListRow[];
   params: FreelancersListParams;
+  totalCount: number;
 }) {
-  function hrefFor(overrides: { sort?: FreelancerSortColumn }) {
+  function hrefFor(overrides: { sort?: FreelancerSortColumn; page?: number }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
     next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
@@ -33,6 +37,9 @@ export function FreelancersTable({
     if (params.platformFreelancerIdFilter) next.set("platformFreelancerId", params.platformFreelancerIdFilter);
     if (params.nameFilter) next.set("name", params.nameFilter);
     if (params.emailFilter) next.set("email", params.emailFilter);
+    // ソート列を変更した場合は1ページ目に戻す(絞り込み結果が変わるため)。
+    const page = overrides.page ?? (overrides.sort ? 1 : params.page);
+    if (page > 1) next.set("page", String(page));
     return `/freelancers?${next.toString()}`;
   }
 
@@ -115,6 +122,12 @@ export function FreelancersTable({
           )}
         </tbody>
       </table>
+      <PaginationControls
+        page={params.page}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hrefFor={(page) => hrefFor({ page })}
+      />
     </div>
   );
 }

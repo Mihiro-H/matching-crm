@@ -1,4 +1,6 @@
+import { notFound } from "next/navigation";
 import { getProjectInvoices } from "@/lib/projects/get-project-invoices";
+import { resolveProjectId } from "@/lib/projects/resolve-project-id";
 import { PAYMENT_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
@@ -8,7 +10,10 @@ export default async function ProjectInvoicesTab({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: numberParam } = await params;
+  const id = await resolveProjectId(numberParam);
+  if (!id) notFound();
+
   const { invoices, error } = await getProjectInvoices(id);
 
   if (error) {

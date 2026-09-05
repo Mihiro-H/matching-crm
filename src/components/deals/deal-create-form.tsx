@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { SearchSelectModal, type SearchResultItem } from "@/components/ui/search-select-modal";
 import { CreatePersonInlineForm } from "@/components/people/create-person-inline-form";
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
-import { searchPeople } from "@/lib/search-select/actions";
+import { searchAssignableUsers, searchPeople } from "@/lib/search-select/actions";
 import { createDealManual } from "@/lib/deals/actions";
 import { JOB_CATEGORIES, JOB_CATEGORY_LABELS } from "@/lib/job-categories";
 import type { DealSource, JobCategory } from "@/lib/supabase/database.types";
@@ -18,6 +19,7 @@ const SOURCE_OPTIONS: { value: Exclude<DealSource, "form">; label: string }[] = 
 /**
  * 商談管理一覧「+新規作成」(SCREEN_SPEC.md「商談管理」)。
  * 外部フォーム経由(source='form')以外の手段で得た商談を手動登録する画面。
+ * 主担当・サブ担当もこの画面で登録できる(どちらも任意)。
  */
 export function DealCreateForm() {
   const router = useRouter();
@@ -25,6 +27,9 @@ export function DealCreateForm() {
 
   const [person, setPerson] = useState<SearchResultItem | null>(null);
   const [showPersonModal, setShowPersonModal] = useState(false);
+  const [primaryAssignee, setPrimaryAssignee] = useState<SearchResultItem | null>(null);
+  const [secondaryAssignees, setSecondaryAssignees] = useState<SearchResultItem[]>([]);
+  const [assigneeModal, setAssigneeModal] = useState<"primary" | "secondary" | null>(null);
   const [source, setSource] = useState<Exclude<DealSource, "form">>("referral");
   const [jobCategories, setJobCategories] = useState<JobCategory[]>([]);
   const [inquiryBody, setInquiryBody] = useState("");
@@ -37,11 +42,30 @@ export function DealCreateForm() {
     );
   }
 
+  function handlePrimarySelected(items: SearchResultItem[]) {
+    const [item] = items;
+    if (!item) return;
+    setPrimaryAssignee(item);
+    // 主担当としても選ばれたユーザーがサブ担当に重複表示されないようにする。
+    setSecondaryAssignees((prev) => prev.filter((a) => a.id !== item.id));
+  }
+
+  function handleSecondaryAdded(items: SearchResultItem[]) {
+    setSecondaryAssignees((prev) => {
+      const next = [...prev];
+      for (const item of items) {
+        if (item.id === primaryAssignee?.id) continue;
+        if (!next.some((a) => a.id === item.id)) next.push(item);
+      }
+      return next;
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!person) {
-      setError("担当者を選択してください。");
+      setError("企業担当者を選択してください。");
       return;
     }
     setIsSubmitting(true);
@@ -50,13 +74,15 @@ export function DealCreateForm() {
       jobCategories,
       inquiryBody: inquiryBody || null,
       source,
+      primaryAssigneeId: primaryAssignee?.id ?? null,
+      secondaryAssigneeIds: secondaryAssignees.map((a) => a.id),
     });
     setIsSubmitting(false);
     if (!result.success) {
       setError(result.error);
       return;
     }
-    router.push(`/deals/${result.id}`);
+    router.push(`/deals/${result.number}`);
   }
 
   return (
@@ -65,7 +91,7 @@ export function DealCreateForm() {
 
       <div className="flex flex-col gap-4">
         <div>
-          <p className="text-xs text-neutral-600">担当者</p>
+          <p className="text-xs text-neutral-600">企業担当者</p>
           <div className="mt-1 flex items-center gap-2">
             <span className="text-sm text-neutral-900">
               {person ? `${person.sublabel ?? "(企業未登録)"} / ${person.label}` : "未選択"}
@@ -75,8 +101,52 @@ export function DealCreateForm() {
               onClick={() => setShowPersonModal(true)}
               className="text-xs text-primary-600 hover:underline"
             >
-              担当者を選択
+              企業担当者を選択
             </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-neutral-600">主担当</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-sm text-neutral-900">{primaryAssignee ? primaryAssignee.label : "未選択"}</span>
+              <button
+                type="button"
+                onClick={() => setAssigneeModal("primary")}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                主担当を選択
+              </button>
+            </div>
+          </div>
+          <div>
+            <p className="text-xs text-neutral-600">サブ担当</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {secondaryAssignees.map((a) => (
+                <span
+                  key={a.id}
+                  className="flex items-center gap-1 rounded-full bg-primary-50 py-1 pl-3 pr-1 text-sm text-primary-600"
+                >
+                  {a.label}
+                  <button
+                    type="button"
+                    aria-label={`${a.label}を削除`}
+                    onClick={() => setSecondaryAssignees((prev) => prev.filter((x) => x.id !== a.id))}
+                    className="rounded-full p-0.5 hover:bg-primary-100"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => setAssigneeModal("secondary")}
+                className="text-xs text-primary-600 hover:underline"
+              >
+                サブ担当を追加
+              </button>
+            </div>
           </div>
         </div>
 
@@ -134,7 +204,7 @@ export function DealCreateForm() {
       <SearchSelectModal
         isOpen={showPersonModal}
         onClose={() => setShowPersonModal(false)}
-        title="担当者を選択"
+        title="企業担当者を選択"
         placeholder="担当者名で検索"
         mode="single"
         search={searchPeople}
@@ -146,6 +216,25 @@ export function DealCreateForm() {
           label: (query) => `"${query}"を新規登録`,
           render: (query, onCreated) => <CreatePersonInlineForm initialName={query} onCreated={onCreated} />,
         }}
+      />
+      <SearchSelectModal
+        isOpen={assigneeModal === "primary"}
+        onClose={() => setAssigneeModal(null)}
+        title="主担当を選択"
+        placeholder="氏名で検索"
+        mode="single"
+        search={searchAssignableUsers}
+        onConfirm={handlePrimarySelected}
+      />
+      <SearchSelectModal
+        isOpen={assigneeModal === "secondary"}
+        onClose={() => setAssigneeModal(null)}
+        title="サブ担当を選択"
+        placeholder="氏名で検索"
+        mode="multiple"
+        confirmLabel="追加"
+        search={searchAssignableUsers}
+        onConfirm={handleSecondaryAdded}
       />
     </form>
   );

@@ -1,12 +1,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ContractStatus, EstimateDocumentType } from "@/lib/supabase/database.types";
 import type { EstimatesListParams } from "./list-params";
+import { rangeForPage } from "@/lib/pagination";
 
 export type EstimateListRow = {
   id: string;
   companyId: string;
   companyName: string;
   projectId: string;
+  projectNumber: number;
   projectTitle: string;
   documentType: EstimateDocumentType;
   amount: number;
@@ -21,12 +23,15 @@ export type EstimateListRow = {
  */
 export async function getEstimates(
   params: EstimatesListParams
-): Promise<{ estimates: EstimateListRow[]; error: string | null }> {
+): Promise<{ estimates: EstimateListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
 
   let query = supabase
     .from("estimate_list_view")
-    .select("id, document_type, amount, contract_status, created_at, project_id, project_title, company_id, company_name")
+    .select(
+      "id, document_type, amount, contract_status, created_at, project_id, project_title, project_number, company_id, company_name",
+      { count: "exact" }
+    )
     .order(params.sortBy, { ascending: params.sortDir === "asc" });
 
   if (params.documentTypeFilter) {
@@ -39,10 +44,12 @@ export async function getEstimates(
     query = query.ilike("project_title", `%${params.projectTitleFilter}%`);
   }
 
-  const { data, error } = await query;
+  query = query.range(...rangeForPage(params.page));
+
+  const { data, error, count } = await query;
 
   if (error) {
-    return { estimates: [], error: error.message };
+    return { estimates: [], totalCount: 0, error: error.message };
   }
 
   return {
@@ -51,12 +58,14 @@ export async function getEstimates(
       companyId: row.company_id,
       companyName: row.company_name,
       projectId: row.project_id,
+      projectNumber: row.project_number,
       projectTitle: row.project_title,
       documentType: row.document_type,
       amount: row.amount,
       contractStatus: row.contract_status,
       createdAt: row.created_at,
     })),
+    totalCount: count ?? 0,
     error: null,
   };
 }

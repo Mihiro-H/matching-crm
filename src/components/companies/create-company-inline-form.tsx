@@ -22,6 +22,12 @@ export function CreateCompanyInlineForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // このフォームはSearchSelectModal(ポータル経由でdocument.bodyへレンダーされる)の
+    // createNew.render()経由で、呼び出し元の<form>の中から使われることがある。
+    // ポータルはDOM上では祖先の<form>の外側に出るが、Reactのsubmitイベントは
+    // Reactツリー上の祖先(呼び出し元の<form>)へも伝播してしまい、その
+    // onSubmitまで誤って発火する(実際に発生した不具合)。stopPropagationで止める。
+    e.stopPropagation();
     if (!name.trim()) {
       setError("企業名を入力してください");
       return;

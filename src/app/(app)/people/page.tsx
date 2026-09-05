@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getPeople } from "@/lib/people/get-people";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PAGE_SIZE, parsePageParam } from "@/lib/pagination";
 
 /**
  * 担当者一覧(SCREEN_SPEC.md「担当者一覧」)。
@@ -9,7 +11,11 @@ import { requirePageAccess } from "@/lib/auth/page-access";
  * (基本情報: 担当者名・メール・電話番号・企業名のみ)。左サイドバーには表示しない
  * (商談・案件の各詳細ページからのリンクで辿り着く画面のため)。
  */
-export default async function PeoplePage() {
+export default async function PeoplePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return (
       <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-8">
@@ -21,8 +27,10 @@ export default async function PeoplePage() {
     );
   }
 
-  const { canEdit } = await requirePageAccess("deals");
-  const { people, error } = await getPeople();
+  const { canEdit } = await requirePageAccess("people");
+  const resolvedParams = await searchParams;
+  const page = parsePageParam(resolvedParams.page);
+  const { people, totalCount, error } = await getPeople(page);
 
   return (
     <div className="flex flex-col gap-4">
@@ -72,6 +80,12 @@ export default async function PeoplePage() {
             )}
           </tbody>
         </table>
+        <PaginationControls
+          page={page}
+          totalCount={totalCount}
+          pageSize={PAGE_SIZE}
+          hrefFor={(p) => (p > 1 ? `/people?page=${p}` : "/people")}
+        />
       </div>
     </div>
   );

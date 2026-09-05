@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import type { ReportListRow } from "@/lib/reports/get-reports";
 import { formatDateTimeJa } from "@/lib/format";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 const FREQUENCY_LABELS = { weekly: "週次", monthly: "月次" } as const;
 
@@ -10,7 +12,15 @@ const FREQUENCY_LABELS = { weekly: "週次", monthly: "月次" } as const;
  * レポート一覧(SCREEN_SPEC.md 8章)。各行クリックでレポート表示画面(/reports/[id])へ
  * 遷移する(企業一覧等と違い、行内に複数のリンク先を持たないため行全体をリンクにする)。
  */
-export function ReportsTable({ reports }: { reports: ReportListRow[] }) {
+export function ReportsTable({
+  reports,
+  page,
+  totalCount,
+}: {
+  reports: ReportListRow[];
+  page: number;
+  totalCount: number;
+}) {
   const router = useRouter();
 
   return (
@@ -57,6 +67,12 @@ export function ReportsTable({ reports }: { reports: ReportListRow[] }) {
           )}
         </tbody>
       </table>
+      <PaginationControls
+        page={page}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hrefFor={(p) => (p > 1 ? `/reports?page=${p}` : "/reports")}
+      />
     </div>
   );
 }

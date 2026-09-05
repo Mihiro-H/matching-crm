@@ -34,6 +34,7 @@ export async function getPersonById(id: string): Promise<PersonDetail | null> {
 
 export type PersonDealRow = {
   id: string;
+  number: number;
   status: DealStatus;
   createdAt: string;
 };
@@ -43,14 +44,19 @@ export async function getDealsForPerson(personId: string): Promise<{ deals: Pers
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("deals")
-    .select("id, status, created_at")
+    .select("id, number, status, created_at")
     .eq("person_id", personId)
     .order("created_at", { ascending: false });
 
   if (error) return { deals: [], error: error.message };
 
   return {
-    deals: (data ?? []).map((row) => ({ id: row.id, status: row.status, createdAt: row.created_at })),
+    deals: (data ?? []).map((row) => ({
+      id: row.id,
+      number: row.number,
+      status: row.status,
+      createdAt: row.created_at,
+    })),
     error: null,
   };
 }

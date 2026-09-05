@@ -25,6 +25,7 @@ export default async function FreelancersPage({
     platformFreelancerId?: string;
     name?: string;
     email?: string;
+    page?: string;
   }>;
 }) {
   if (!isSupabaseConfigured()) {
@@ -35,7 +36,7 @@ export default async function FreelancersPage({
 
   const resolvedParams = await searchParams;
   const params = parseFreelancersListParams(resolvedParams);
-  const { freelancers, error } = await getFreelancers(params);
+  const { freelancers, totalCount, error } = await getFreelancers(params);
 
   function chipHref(jobCategory: JobCategory | null) {
     const next = new URLSearchParams();
@@ -78,7 +79,7 @@ export default async function FreelancersPage({
         </div>
       )}
 
-      {!error && <FreelancersTable freelancers={freelancers} params={params} />}
+      {!error && <FreelancersTable freelancers={freelancers} params={params} totalCount={totalCount} />}
     </div>
   );
 }

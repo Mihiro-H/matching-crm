@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateProjectDetails } from "@/lib/projects/actions";
 import { PROJECT_STATUS_META } from "@/lib/status-badges";
@@ -86,7 +87,9 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
       <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-neutral-600">{project.companyName}</p>
+            <Link href={`/companies/${project.company_id}`} className="text-xs text-primary-600 hover:underline">
+              {project.companyName}
+            </Link>
             <h2 className="mt-1 text-lg text-neutral-900">{project.title}</h2>
           </div>
           <div className="flex items-center gap-3">
@@ -104,7 +107,7 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
         </div>
         <dl className="mt-4 flex gap-6 text-sm">
           <div>
-            <dt className="text-xs text-neutral-600">予算</dt>
+            <dt className="text-xs text-neutral-600">金額</dt>
             <dd className="text-neutral-900">
               {project.budget !== null ? formatCurrencyJPY(project.budget) : "-"}
             </dd>
@@ -139,7 +142,7 @@ export function ProjectInfoSection({ project, canEdit }: { project: ProjectDetai
           />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs text-neutral-600">予算</span>
+          <span className="text-xs text-neutral-600">金額</span>
           <input
             type="number"
             min={0}

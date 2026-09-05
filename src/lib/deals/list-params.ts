@@ -1,10 +1,19 @@
 import type { DealStatus } from "@/lib/supabase/database.types";
+import { parsePageParam } from "@/lib/pagination";
 
 export const DEAL_SORTABLE_COLUMNS = ["company", "name", "status", "source", "assignee", "createdAt"] as const;
 export type DealSortColumn = (typeof DEAL_SORTABLE_COLUMNS)[number];
 export type SortDirection = "asc" | "desc";
 
-const VALID_STATUSES: DealStatus[] = ["new", "in_progress", "negotiating", "on_hold", "won", "lost"];
+const VALID_STATUSES: DealStatus[] = [
+  "new",
+  "in_progress",
+  "negotiating",
+  "on_hold",
+  "won",
+  "estimate_submitted",
+  "lost",
+];
 
 export type DealsListParams = {
   sortBy: DealSortColumn;
@@ -13,6 +22,7 @@ export type DealsListParams = {
   companyNameFilter: string | null;
   nameFilter: string | null;
   assigneeFilter: { id: string; name: string } | null;
+  page: number;
 };
 
 /**
@@ -29,6 +39,7 @@ export function parseDealsListParams(params: {
   name?: string;
   assigneeId?: string;
   assigneeName?: string;
+  page?: string;
 }): DealsListParams {
   const sortBy = DEAL_SORTABLE_COLUMNS.includes(params.sort as DealSortColumn)
     ? (params.sort as DealSortColumn)
@@ -47,7 +58,7 @@ export function parseDealsListParams(params: {
       ? { id: params.assigneeId.trim(), name: params.assigneeName.trim() }
       : null;
 
-  return { sortBy, sortDir, statusFilter, companyNameFilter, nameFilter, assigneeFilter };
+  return { sortBy, sortDir, statusFilter, companyNameFilter, nameFilter, assigneeFilter, page: parsePageParam(params.page) };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

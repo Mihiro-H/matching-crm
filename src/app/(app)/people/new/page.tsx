@@ -3,7 +3,7 @@ import { PersonCreateForm } from "@/components/people/person-create-form";
 import { requirePageAccess } from "@/lib/auth/page-access";
 
 export default async function NewPersonPage() {
-  const { canEdit } = await requirePageAccess("deals");
+  const { canEdit } = await requirePageAccess("people");
   if (!canEdit) {
     redirect("/people");
   }

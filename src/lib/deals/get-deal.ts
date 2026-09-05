@@ -3,6 +3,7 @@ import type { DealSource, DealStatus, Json, JobCategory } from "@/lib/supabase/d
 
 export type DealDetail = {
   id: string;
+  number: number;
   personId: string;
   personName: string;
   personEmail: string | null;
@@ -25,7 +26,7 @@ export async function getDealById(id: string): Promise<DealDetail | null> {
   const { data, error } = await supabase
     .from("deals")
     .select(
-      "id, status, source, job_categories, inquiry_body, lost_reason, won_reason, created_at, updated_at, person:people(id, name, email, phone, company_id, company_name_raw, company:companies(name)), assignee:users(name)"
+      "id, number, status, source, job_categories, inquiry_body, lost_reason, won_reason, created_at, updated_at, person:people(id, name, email, phone, company_id, company_name_raw, company:companies(name)), assignee:users(name)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -34,6 +35,7 @@ export async function getDealById(id: string): Promise<DealDetail | null> {
 
   return {
     id: data.id,
+    number: data.number,
     personId: data.person.id,
     personName: data.person.name,
     personEmail: data.person.email,

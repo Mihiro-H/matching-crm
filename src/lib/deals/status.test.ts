@@ -25,4 +25,8 @@ describe("getNextStatusOptions", () => {
   test("'lost' is terminal: no further status transitions", () => {
     expect(getNextStatusOptions("lost")).toEqual([]);
   });
+
+  test("'estimate_submitted' is terminal for manual transitions: only set automatically on estimate creation", () => {
+    expect(getNextStatusOptions("estimate_submitted")).toEqual([]);
+  });
 });

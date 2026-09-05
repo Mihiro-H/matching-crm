@@ -1,9 +1,12 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DealStatus, JobCategory } from "@/lib/supabase/database.types";
 import type { DealsListParams } from "./list-params";
+import { rangeForPage } from "@/lib/pagination";
 
 export type DealListRow = {
   id: string;
+  number: number;
+  companyId: string | null;
   companyName: string;
   name: string;
   source: string;
@@ -29,12 +32,14 @@ const SORT_COLUMN_MAP: Record<DealsListParams["sortBy"], string> = {
  */
 export async function getDeals(
   params: DealsListParams
-): Promise<{ deals: DealListRow[]; error: string | null }> {
+): Promise<{ deals: DealListRow[]; totalCount: number; error: string | null }> {
   const supabase = await createSupabaseServerClient();
 
   let query = supabase
     .from("deals_list_view")
-    .select("id, company_name, name, source, created_at, status, job_categories, assignee_name")
+    .select("id, number, company_id, company_name, name, source, created_at, status, job_categories, assignee_name", {
+      count: "exact",
+    })
     .order(SORT_COLUMN_MAP[params.sortBy], { ascending: params.sortDir === "asc" });
 
   if (params.statusFilter) {
@@ -50,15 +55,17 @@ export async function getDeals(
     query = query.eq("assigned_user_id", params.assigneeFilter.id);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query.range(...rangeForPage(params.page));
 
   if (error) {
-    return { deals: [], error: error.message };
+    return { deals: [], totalCount: 0, error: error.message };
   }
 
   return {
     deals: (data ?? []).map((row) => ({
       id: row.id,
+      number: row.number,
+      companyId: row.company_id,
       companyName: row.company_name ?? "(企業名未登録)",
       name: row.name,
       source: row.source,
@@ -67,6 +74,7 @@ export async function getDeals(
       jobCategories: row.job_categories,
       assigneeName: row.assignee_name,
     })),
+    totalCount: count ?? 0,
     error: null,
   };
 }

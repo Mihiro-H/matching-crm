@@ -1,4 +1,5 @@
 import type { EstimateDocumentType } from "@/lib/supabase/database.types";
+import { parsePageParam } from "@/lib/pagination";
 
 export const ESTIMATE_SORTABLE_COLUMNS = [
   "company_name",
@@ -20,6 +21,7 @@ export type EstimatesListParams = {
   documentTypeFilter: EstimateDocumentType | null;
   companyNameFilter: string | null;
   projectTitleFilter: string | null;
+  page: number;
 };
 
 /**
@@ -34,6 +36,7 @@ export function parseEstimatesListParams(params: {
   documentType?: string;
   companyName?: string;
   projectTitle?: string;
+  page?: string;
 }): EstimatesListParams {
   const sortBy = ESTIMATE_SORTABLE_COLUMNS.includes(params.sort as EstimateSortColumn)
     ? (params.sort as EstimateSortColumn)
@@ -48,7 +51,14 @@ export function parseEstimatesListParams(params: {
   const companyNameFilter = params.companyName?.trim() || null;
   const projectTitleFilter = params.projectTitle?.trim() || null;
 
-  return { sortBy, sortDir, documentTypeFilter, companyNameFilter, projectTitleFilter };
+  return {
+    sortBy,
+    sortDir,
+    documentTypeFilter,
+    companyNameFilter,
+    projectTitleFilter,
+    page: parsePageParam(params.page),
+  };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

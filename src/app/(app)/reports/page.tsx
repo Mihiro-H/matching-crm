@@ -3,14 +3,21 @@ import { getReports } from "@/lib/reports/get-reports";
 import { ReportsTable } from "@/components/reports/reports-table";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import { parsePageParam } from "@/lib/pagination";
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   if (!isSupabaseConfigured()) {
     return <SupabaseNotConfiguredNotice />;
   }
 
   const { canEdit } = await requirePageAccess("reports");
-  const { reports, error } = await getReports();
+  const resolvedParams = await searchParams;
+  const page = parsePageParam(resolvedParams.page);
+  const { reports, totalCount, error } = await getReports(page);
 
   return (
     <div className="flex flex-col gap-4">
@@ -28,7 +35,7 @@ export default async function ReportsPage() {
         </div>
       )}
 
-      {!error && <ReportsTable reports={reports} />}
+      {!error && <ReportsTable reports={reports} page={page} totalCount={totalCount} />}
     </div>
   );
 }

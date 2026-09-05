@@ -271,17 +271,32 @@ async function insertEstimateRow(
 
   if (error) return { success: false, error: error.message };
 
-  if (extra.signerEmail) {
+  const { data: project } = await supabase
+    .from("projects")
+    .select("company_id, deal_id")
+    .eq("id", data.project_id)
+    .maybeSingle();
+
+  if (extra.signerEmail && project) {
     // 次回以降フォームの初期値として使えるよう、送付先を企業に記憶しておく
     // (getProjectDocumentInfo参照。失敗しても送付自体は完了しているので握りつぶす)
-    const { data: project } = await supabase
-      .from("projects")
-      .select("company_id")
-      .eq("id", data.project_id)
-      .maybeSingle();
-    if (project) {
-      await supabase.from("companies").update({ esignature_email: extra.signerEmail }).eq("id", project.company_id);
-    }
+    await supabase.from("companies").update({ esignature_email: extra.signerEmail }).eq("id", project.company_id);
+  }
+
+  if (input.documentType === "estimate" && project?.deal_id) {
+    // 商談管理「見積提出済」への自動遷移(手動では選べない。deals/status.ts参照)。
+    // stale_estimate_notified_atもnullへ戻し、この見積についてまた30日後に
+    // 再判定できるようにする(check-stale-estimates cron参照)。lostの商談は
+    // 触らない(既に終端に達しているため)。
+    await supabase
+      .from("deals")
+      .update({
+        status: "estimate_submitted",
+        estimate_submitted_at: new Date().toISOString(),
+        stale_estimate_notified_at: null,
+      })
+      .eq("id", project.deal_id)
+      .neq("status", "lost");
   }
 
   revalidatePath("/estimates");

@@ -18,7 +18,7 @@ export default async function PersonDetailLayout({
     return <SupabaseNotConfiguredNotice />;
   }
 
-  const { canEdit } = await requirePageAccess("deals");
+  const { canEdit } = await requirePageAccess("people");
 
   const person = await getPersonById(id);
   if (!person) {

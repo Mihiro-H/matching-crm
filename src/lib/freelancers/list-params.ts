@@ -1,5 +1,6 @@
 import type { JobCategory } from "@/lib/supabase/database.types";
 import { JOB_CATEGORIES } from "@/lib/job-categories";
+import { parsePageParam } from "@/lib/pagination";
 
 export const FREELANCER_SORTABLE_COLUMNS = [
   "platform_freelancer_id",
@@ -19,6 +20,7 @@ export type FreelancersListParams = {
   platformFreelancerIdFilter: string | null;
   nameFilter: string | null;
   emailFilter: string | null;
+  page: number;
 };
 
 /**
@@ -32,6 +34,7 @@ export function parseFreelancersListParams(params: {
   platformFreelancerId?: string;
   name?: string;
   email?: string;
+  page?: string;
 }): FreelancersListParams {
   const sortBy = FREELANCER_SORTABLE_COLUMNS.includes(params.sort as FreelancerSortColumn)
     ? (params.sort as FreelancerSortColumn)
@@ -47,7 +50,15 @@ export function parseFreelancersListParams(params: {
   const nameFilter = params.name?.trim() || null;
   const emailFilter = params.email?.trim() || null;
 
-  return { sortBy, sortDir, jobCategoryFilter, platformFreelancerIdFilter, nameFilter, emailFilter };
+  return {
+    sortBy,
+    sortDir,
+    jobCategoryFilter,
+    platformFreelancerIdFilter,
+    nameFilter,
+    emailFilter,
+    page: parsePageParam(params.page),
+  };
 }
 
 /** 列ヘッダークリック時の次のソート方向を決める(同じ列なら反転、別の列ならasc) */

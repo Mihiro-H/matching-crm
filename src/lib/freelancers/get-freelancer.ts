@@ -34,6 +34,7 @@ export async function getFreelancerById(id: string): Promise<FreelancerDetail | 
 export type FreelancerAssignment = {
   id: string;
   projectId: string;
+  projectNumber: number;
   projectTitle: string;
   companyName: string;
   projectStatus: ProjectStatus;
@@ -49,7 +50,7 @@ export async function getFreelancerAssignments(
   const { data, error } = await supabase
     .from("project_role_assignments")
     .select(
-      "id, assigned_at, project_role:project_roles(job_category, project:projects(id, title, status, company:companies(name)))"
+      "id, assigned_at, project_role:project_roles(job_category, project:projects(id, number, title, status, company:companies(name)))"
     )
     .eq("freelancer_id", freelancerId)
     .order("assigned_at", { ascending: false });
@@ -65,6 +66,7 @@ export async function getFreelancerAssignments(
       {
         id: row.id,
         projectId: project.id,
+        projectNumber: project.number,
         projectTitle: project.title,
         companyName: project.company?.name ?? "(企業不明)",
         projectStatus: project.status,

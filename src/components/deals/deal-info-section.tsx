@@ -100,10 +100,6 @@ export function DealInfoSection({ deal, canEdit }: { deal: DealDetail; canEdit: 
           <dd className="text-neutral-900">{SOURCE_LABELS[deal.source] ?? deal.source}</dd>
         </div>
         <div>
-          <dt className="text-xs text-neutral-600">主担当</dt>
-          <dd className="text-neutral-900">{deal.assigneeName ?? "未アサイン"}</dd>
-        </div>
-        <div>
           <dt className="text-xs text-neutral-600">商談更新日</dt>
           <dd className="text-neutral-900">{formatDateTimeJa(deal.updatedAt)}</dd>
         </div>

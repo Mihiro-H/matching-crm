@@ -45,7 +45,11 @@ export function PermissionsPageClient({
         </button>
       </div>
 
-      {subTab === "individual" ? <IndividualPermissionsTab /> : <DepartmentPermissionsTab departments={departments} users={users} />}
+      {subTab === "individual" ? (
+        <IndividualPermissionsTab users={users} departments={departments} />
+      ) : (
+        <DepartmentPermissionsTab departments={departments} users={users} />
+      )}
     </div>
   );
 }

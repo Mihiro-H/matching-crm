@@ -10,7 +10,13 @@ describe("parseFreelancersListParams", () => {
       platformFreelancerIdFilter: null,
       nameFilter: null,
       emailFilter: null,
+      page: 1,
     });
+  });
+
+  test("accepts a valid page number and falls back to 1 for invalid values", () => {
+    expect(parseFreelancersListParams({ page: "2" })).toMatchObject({ page: 2 });
+    expect(parseFreelancersListParams({ page: "not_a_number" })).toMatchObject({ page: 1 });
   });
 
   test("accepts a valid sortBy and sortDir", () => {

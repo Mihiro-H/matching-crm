@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getInvoiceById, getInvoicePaymentStatusLog } from "@/lib/invoices/get-invoice";
 import { PAYMENT_STATUS_META } from "@/lib/status-badges";
@@ -30,8 +31,14 @@ export default async function InvoiceDetailPage({
       <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-neutral-600">{invoice.companyName}</p>
-            <h2 className="mt-1 text-lg text-neutral-900">{invoice.projectTitle}</h2>
+            <Link href={`/companies/${invoice.company_id}`} className="text-xs text-primary-600 hover:underline">
+              {invoice.companyName}
+            </Link>
+            <h2 className="mt-1 text-lg text-neutral-900">
+              <Link href={`/projects/${invoice.projectNumber}`} className="hover:underline">
+                {invoice.projectTitle}
+              </Link>
+            </h2>
           </div>
           <StatusBadge meta={PAYMENT_STATUS_META[invoice.payment_status]} />
         </div>
@@ -60,7 +67,7 @@ export default async function InvoiceDetailPage({
             href={`/api/misoca/invoices/${invoice.id}/pdf`}
             target="_blank"
             rel="noreferrer"
-            className="mt-2 inline-block text-sm text-primary-600 hover:underline"
+            className="mt-2 inline-block text-sm text-success-text underline underline-offset-2"
           >
             請求書PDFを見る
           </a>

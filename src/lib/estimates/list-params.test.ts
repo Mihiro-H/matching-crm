@@ -9,7 +9,13 @@ describe("parseEstimatesListParams", () => {
       documentTypeFilter: null,
       companyNameFilter: null,
       projectTitleFilter: null,
+      page: 1,
     });
+  });
+
+  test("accepts a valid page number and falls back to 1 for invalid values", () => {
+    expect(parseEstimatesListParams({ page: "2" })).toMatchObject({ page: 2 });
+    expect(parseEstimatesListParams({ page: "not_a_number" })).toMatchObject({ page: 1 });
   });
 
   test("accepts a valid sortBy and sortDir", () => {

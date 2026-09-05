@@ -88,7 +88,7 @@ export function ProjectsKanban({
                       canEdit ? "cursor-move" : ""
                     } ${isPending ? "opacity-70" : ""}`}
                   >
-                    <Link href={`/projects/${project.id}`} className="text-sm text-primary-600 hover:underline">
+                    <Link href={`/projects/${project.number}`} className="text-sm text-primary-600 hover:underline">
                       {project.title}
                     </Link>
                     <p className="mt-1 text-xs text-neutral-600">{project.companyName}</p>

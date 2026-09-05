@@ -90,6 +90,35 @@ export async function applyDepartmentTemplateToMembers(
   return { success: true };
 }
 
+/**
+ * 個人別権限タブの一括適用(SCREEN_SPEC.md 10章 9-2)。
+ * チェックボックスで選んだ複数ユーザーに対し、1つのページ・権限レベルを
+ * まとめて適用する(部署一括のbuildBulkPermissionUpsertsを1ページ分だけ使う形)。
+ */
+export async function applyPermissionToUsers(
+  userIds: string[],
+  pageKey: string,
+  permission: PagePermission
+): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  if (userIds.length === 0) {
+    return { success: false, error: "ユーザーを選択してください。" };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const upserts = buildBulkPermissionUpserts(userIds, [{ pageKey, permission }]);
+  const { error } = await supabase
+    .from("user_page_permissions")
+    .upsert(upserts, { onConflict: "user_id,page_key" });
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
 export async function createDepartment(name: string): Promise<MutationResult> {
   const authCheck = await requireAdmin();
   if (!authCheck.ok) return { success: false, error: authCheck.error };
@@ -99,6 +128,38 @@ export async function createDepartment(name: string): Promise<MutationResult> {
   }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.from("departments").insert({ name: name.trim() });
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
+/** 部署名の変更(SCREEN_SPEC.md 10章 9-2: 部署名が変わった場合に対応するため)。 */
+export async function updateDepartment(id: string, name: string): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  if (!name.trim()) {
+    return { success: false, error: "部署名を入力してください。" };
+  }
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("departments").update({ name: name.trim() }).eq("id", id);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
+/**
+ * 部署の削除。所属ユーザーは部署なし(null)になり、department_page_permissionsの
+ * テンプレート行は連動削除される(DBの外部キー制約側で処理される)。
+ */
+export async function deleteDepartment(id: string): Promise<MutationResult> {
+  const authCheck = await requireAdmin();
+  if (!authCheck.ok) return { success: false, error: authCheck.error };
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.from("departments").delete().eq("id", id);
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/settings");

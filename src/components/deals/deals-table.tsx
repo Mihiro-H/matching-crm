@@ -9,9 +9,11 @@ import type { DealListRow } from "@/lib/deals/get-deals";
 import { DEAL_STATUS_META } from "@/lib/status-badges";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SortFilterHeader } from "@/components/ui/sort-filter-header";
+import { PaginationControls } from "@/components/ui/pagination-controls";
 import { searchUsers } from "@/lib/search-select/actions";
 import { JOB_CATEGORY_LABELS, JOB_CATEGORY_TAG_STYLES } from "@/lib/job-categories";
 import { formatDateJa } from "@/lib/format";
+import { PAGE_SIZE } from "@/lib/pagination";
 
 const COLUMN_LABELS: Record<DealSortColumn, string> = {
   company: "企業名",
@@ -31,11 +33,13 @@ const SOURCE_LABELS: Record<string, string> = {
 export function DealsTable({
   deals,
   params,
+  totalCount,
 }: {
   deals: DealListRow[];
   params: DealsListParams;
+  totalCount: number;
 }) {
-  function hrefFor(overrides: { sort?: DealSortColumn }) {
+  function hrefFor(overrides: { sort?: DealSortColumn; page?: number }) {
     const next = new URLSearchParams();
     next.set("sort", overrides.sort ?? params.sortBy);
     next.set("dir", overrides.sort ? nextSortDirection(params, overrides.sort) : params.sortDir);
@@ -46,6 +50,9 @@ export function DealsTable({
       next.set("assigneeId", params.assigneeFilter.id);
       next.set("assigneeName", params.assigneeFilter.name);
     }
+    // ソート列を変更した場合は1ページ目に戻す(絞り込み結果が変わるため)。
+    const page = overrides.page ?? (overrides.sort ? 1 : params.page);
+    if (page > 1) next.set("page", String(page));
     return `/deals?${next.toString()}`;
   }
 
@@ -108,9 +115,17 @@ export function DealsTable({
         <tbody>
           {deals.map((deal) => (
             <tr key={deal.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3 text-neutral-600">{deal.companyName}</td>
+              <td className="px-4 py-3 text-neutral-600">
+                {deal.companyId ? (
+                  <Link href={`/companies/${deal.companyId}`} className="text-primary-600 hover:underline">
+                    {deal.companyName}
+                  </Link>
+                ) : (
+                  deal.companyName
+                )}
+              </td>
               <td className="px-4 py-3">
-                <Link href={`/deals/${deal.id}`} className="text-primary-600 hover:underline">
+                <Link href={`/deals/${deal.number}`} className="text-primary-600 hover:underline">
                   {deal.name}
                 </Link>
               </td>
@@ -149,6 +164,12 @@ export function DealsTable({
           )}
         </tbody>
       </table>
+      <PaginationControls
+        page={params.page}
+        totalCount={totalCount}
+        pageSize={PAGE_SIZE}
+        hrefFor={(page) => hrefFor({ page })}
+      />
     </div>
   );
 }
