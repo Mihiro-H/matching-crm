@@ -1,14 +1,15 @@
 import type { JobCategory } from "./supabase/database.types";
 
-/** DB_SCHEMA.md: job_categories(writer/photographer/marketer/designer)の表示ラベル */
+/** DB_SCHEMA.md: job_categories(writer/photographer/marketer/designer/other)の表示ラベル */
 export const JOB_CATEGORY_LABELS: Record<JobCategory, string> = {
   writer: "ライター",
   photographer: "フォトグラファー",
   marketer: "マーケター",
   designer: "デザイナー",
+  other: "その他",
 };
 
-export const JOB_CATEGORIES: JobCategory[] = ["writer", "photographer", "marketer", "designer"];
+export const JOB_CATEGORIES: JobCategory[] = ["writer", "photographer", "marketer", "designer", "other"];
 
 /**
  * 職種タグの色分け(フリーランス一覧「対応職種」列など)。
@@ -20,6 +21,7 @@ export const JOB_CATEGORY_TAG_STYLES: Record<JobCategory, string> = {
   photographer: "bg-accent-50 text-accent-600",
   marketer: "bg-warning-bg text-warning-text",
   designer: "bg-danger-bg text-danger-text",
+  other: "bg-neutral-100 text-neutral-600",
 };
 
 /** カンバンカードの職種枠概要(SCREEN_SPEC.md 4章 例:「ライター1・デザイナー1」) */

@@ -9,6 +9,7 @@ const NOTIFICATION_TITLE_TEMPLATES: Record<NotificationEventType, string> = {
   reminder: "リマインド: {{company_name}} / {{project_title}}",
   meeting_note_ready: "議事録の作成が完了しました: {{title}}",
   meeting_note_failed: "議事録の作成に失敗しました: {{title}}",
+  duplicate_person_email: "担当者のメールアドレスが重複しています: {{new_name}} / {{existing_name}} ({{email}})",
 };
 
 /** アプリ内通知(ベル)一覧に表示するタイトルを組み立てる。Slack通知と同じplaceholdersを使い回す。 */

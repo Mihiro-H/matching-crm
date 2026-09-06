@@ -7,13 +7,15 @@ import { requireAdmin } from "@/lib/auth/require-admin";
 export type MutationResult = { success: true } | { success: false; error: string };
 
 /**
- * ユーザー管理(SCREEN_SPEC.md 10章 9-2)での氏名・部署の編集。
- * メールアドレスはauth.usersと紐づくログイン用の識別子のため、ここでは変更不可
- * (編集対象は名前・部署のみ)。
+ * ユーザー管理(SCREEN_SPEC.md 10章 9-2)での氏名・部署・Slack IDの編集。
+ * メールアドレスはauth.usersと紐づくログイン用の識別子のため、ここでは変更不可。
+ * Slack IDはSlack通知本文の{{mentions}}プレースホルダーで、そのイベントの通知対象
+ * ユーザーへのメンションに使う(slack/notify.ts参照)。ワークスペースのメンバーIDを
+ * 入力する(表示名ではなくSlackの内部ID。例: U0123ABCDEF)。
  */
 export async function updateUserDetails(
   userId: string,
-  input: { name: string; departmentId: string | null }
+  input: { name: string; departmentId: string | null; slackUserId: string | null }
 ): Promise<MutationResult> {
   const authCheck = await requireAdmin();
   if (!authCheck.ok) return { success: false, error: authCheck.error };
@@ -25,7 +27,11 @@ export async function updateUserDetails(
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("users")
-    .update({ name: input.name.trim(), department_id: input.departmentId })
+    .update({
+      name: input.name.trim(),
+      department_id: input.departmentId,
+      slack_user_id: input.slackUserId?.trim() || null,
+    })
     .eq("id", userId);
 
   if (error) return { success: false, error: error.message };

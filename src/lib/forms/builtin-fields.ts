@@ -7,7 +7,25 @@ import type { FormAnswerType } from "@/lib/supabase/database.types";
  * 従って固定とし、新規追加できるのはこれ以外の「カスタム項目」のみとする
  * (custom_fields(jsonb)に保存、parse-submission.ts参照)。
  */
-export type BuiltinFieldKey = "name" | "email" | "phone" | "company_name" | "job_categories" | "inquiry_body";
+export type BuiltinFieldKey =
+  | "name"
+  | "email"
+  | "phone"
+  | "company_name"
+  | "job_categories"
+  | "inquiry_body"
+  | "privacy_consent";
+
+/**
+ * 個人情報の取扱いに関する同意チェックボックスの固定文言(公開フォームでのみ表示)。
+ * 法務文言のため、フォームごとに編集できないよう定数として持つ
+ * (public-contact-form.tsxがこの定数を直接参照する)。
+ */
+export const PRIVACY_CONSENT_NOTICE =
+  "お客様の個人情報は、当社の個人情報保護方針に基づきましてお取り扱いさせていただきます。\n" +
+  "ご同意いただけます場合には下のボタンをクリックして、次の項目にお進みください。";
+export const PRIVACY_CONSENT_OPTION_VALUE = "agreed";
+export const PRIVACY_CONSENT_CHECKBOX_LABEL = "✅個人情報の取扱いについて同意する";
 
 export type BuiltinFieldDef = {
   key: BuiltinFieldKey;
@@ -31,6 +49,15 @@ export const BUILTIN_FIELDS: BuiltinFieldDef[] = [
     removable: true,
   },
   { key: "inquiry_body", defaultLabel: "問い合わせ内容", answerType: "textarea", options: null, removable: true },
+  {
+    key: "privacy_consent",
+    defaultLabel: "個人情報の取扱いについての同意",
+    answerType: "single_select",
+    options: [{ value: PRIVACY_CONSENT_OPTION_VALUE, label: PRIVACY_CONSENT_CHECKBOX_LABEL }],
+    // 個人情報保護方針への同意は問い合わせ受付の必須項目のため、氏名と同様に外せない
+    // (公開フォームでは常に最後の項目として表示する、public-contact-form.tsx参照)。
+    removable: false,
+  },
 ];
 
 export function isBuiltinFieldKey(key: string): key is BuiltinFieldKey {

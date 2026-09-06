@@ -44,7 +44,7 @@ export default async function FormsPage() {
             {forms.map((form) => (
               <tr key={form.id} className="border-b border-neutral-100 last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/forms/${form.id}`} className="text-primary-600 hover:underline">
+                  <Link href={`/forms/${form.number}`} className="text-primary-600 hover:underline">
                     {form.name}
                   </Link>
                 </td>

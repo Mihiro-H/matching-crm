@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { key: "organization", label: "会社情報" },
   { key: "notifications", label: "通知設定" },
   { key: "permissions", label: "権限設定" },
   { key: "users", label: "ユーザー管理" },

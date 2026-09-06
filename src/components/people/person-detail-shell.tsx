@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { usePageBreadcrumbs } from "@/components/layout/page-header-context";
 import { PersonInfoSection } from "./person-info-section";
+import { PersonMergeSection } from "./person-merge-section";
 import type { PersonDetail } from "@/lib/people/get-person";
 
 const TABS = [{ key: "deals", label: "商談一覧" }] as const;
@@ -26,6 +27,7 @@ export function PersonDetailShell({
   return (
     <div className="flex flex-col gap-4">
       <PersonInfoSection person={person} canEdit={canEdit} />
+      <PersonMergeSection person={person} canEdit={canEdit} />
 
       <nav className="flex gap-1 border-b border-neutral-100">
         {TABS.map((tab) => {

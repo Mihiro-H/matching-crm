@@ -1,5 +1,6 @@
 import type { Json, JobCategory } from "@/lib/supabase/database.types";
 import type { FormFieldRow } from "./types";
+import { normalizePhoneNumber } from "./normalize-phone";
 
 export type PersonInsertFromForm = {
   name: string;
@@ -52,7 +53,12 @@ export function parseFormSubmission(
     const validated = validateFieldValue(field, raw);
     if (!validated.ok) return validated;
 
-    if (field.isBuiltin) {
+    // 個人情報の取扱いへの同意はpeople/deals実カラムに対応先がないため、ビルトイン扱い
+    // (削除不可・必須固定、builtin-fields.ts参照)ではあるがcustom_fieldsへ保存し、
+    // 同意した記録を監査用に残す。
+    if (field.fieldKey === "privacy_consent") {
+      if (validated.value !== null) customFields[field.fieldKey] = validated.value;
+    } else if (field.isBuiltin) {
       applyBuiltinValue(personInsert, dealInsert, field.fieldKey, validated.value);
     } else if (validated.value !== null) {
       customFields[field.fieldKey] = validated.value;
@@ -116,7 +122,7 @@ function applyBuiltinValue(
       person.email = typeof value === "string" ? value : null;
       break;
     case "phone":
-      person.phone = typeof value === "string" ? value : null;
+      person.phone = typeof value === "string" ? normalizePhoneNumber(value) : null;
       break;
     case "company_name":
       person.company_name_raw = typeof value === "string" ? value : null;

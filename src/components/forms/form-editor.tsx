@@ -9,6 +9,7 @@ import {
   moveField,
   removeField,
   renameForm,
+  updateAutoReply,
   updateField,
 } from "@/lib/forms/actions";
 import { BUILTIN_FIELDS } from "@/lib/forms/builtin-fields";
@@ -119,17 +120,18 @@ export function FormEditor({ form }: { form: FormDetail }) {
           )}
         </div>
 
-        <div className="mt-4 flex flex-col gap-1 rounded-md border border-neutral-100 bg-page-bg p-3 text-xs text-neutral-600">
-          <p>公開フォーム(別ドメイン)から利用する連携先:</p>
+        <div className="mt-4 flex flex-col gap-1 rounded-md border border-primary-100 bg-primary-50 p-3 text-xs text-neutral-600">
+          <p>公開フォームURL(この構成のまま、認証なしでそのまま公開できます):</p>
           <p>
-            送信先(POST、要 X-Webhook-Secret ヘッダー):{" "}
-            <code className="text-neutral-900">/api/webhooks/form/{form.id}</code>
-          </p>
-          <p>
-            構成取得用(GET、認証不要・CORS許可済み): <code className="text-neutral-900">/api/forms/{form.id}/schema</code>
-          </p>
-          <p>
-            デザイントークン(CSS変数): <code className="text-neutral-900">/design-tokens.css</code>
+            <a
+              href={`/contact/${form.number}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:underline"
+            >
+              <code className="text-neutral-900">/contact/{form.number}</code>
+            </a>{" "}
+            (自社サイトからこのURLへリンクを貼るか、iframeで埋め込んでください)
           </p>
         </div>
       </div>
@@ -194,6 +196,8 @@ export function FormEditor({ form }: { form: FormDetail }) {
           onError={setError}
         />
       )}
+
+      <AutoReplySection form={form} />
     </div>
   );
 }
@@ -221,7 +225,14 @@ function FieldRow({
   const [error, setError] = useState<string | null>(null);
 
   const hasOptions = field.answerType === "single_select" || field.answerType === "multi_select";
-  const canRemove = !(field.isBuiltin && field.fieldKey === "name");
+  // 氏名・個人情報の取扱いへの同意は問い合わせ受付の必須項目のため外せない
+  // (個人情報の取扱いへの同意は必須自体も固定、actions.ts updateField参照)。
+  const isPrivacyConsent = field.isBuiltin && field.fieldKey === "privacy_consent";
+  const canRemove = !(field.isBuiltin && (field.fieldKey === "name" || isPrivacyConsent));
+  // ビルトインかつ選択肢を持つ項目(依頼職種・個人情報の取扱いへの同意)は、
+  // 選択肢のvalueがDB側の制約と対応した固定値のため編集不可にする
+  // (actions.ts updateFieldのhasFixedOptionsと同じ理由)。
+  const hasFixedOptions = field.isBuiltin && hasOptions;
 
   function handleCancel() {
     setLabel(field.label);
@@ -290,7 +301,7 @@ function FieldRow({
       </td>
       <td className="px-4 py-3 align-top text-neutral-600">{ANSWER_TYPE_LABELS[field.answerType]}</td>
       <td className="px-4 py-3 align-top">
-        {isEditing ? (
+        {isEditing && !isPrivacyConsent ? (
           <input
             type="checkbox"
             checked={isRequired}
@@ -303,7 +314,7 @@ function FieldRow({
       </td>
       <td className="px-4 py-3 align-top text-neutral-600">
         {hasOptions ? (
-          isEditing ? (
+          isEditing && !hasFixedOptions ? (
             <textarea
               value={optionsText}
               onChange={(e) => setOptionsText(e.target.value)}
@@ -352,6 +363,83 @@ function FieldRow({
         </div>
       </td>
     </tr>
+  );
+}
+
+/**
+ * 自動返信メール(フォーム送信時に回答者へ自動送信するメール)の設定。
+ * 件名・本文で使えるプレースホルダーは、送信データ(氏名・企業名)とフォーム名のみに
+ * 絞っている(カスタム項目は回答有無・種類がフォームごとにまちまちで、テンプレートに
+ * 組み込むと未回答時の空文字化などが分かりづらくなるため対象外)。
+ */
+function AutoReplySection({ form }: { form: FormDetail }) {
+  const [enabled, setEnabled] = useState(form.autoReplyEnabled);
+  const [subject, setSubject] = useState(form.autoReplySubject);
+  const [body, setBody] = useState(form.autoReplyBody);
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleSave() {
+    setIsSaving(true);
+    setMessage(null);
+    const result = await updateAutoReply(form.id, { enabled, subject, body });
+    setIsSaving(false);
+    setMessage(result.success ? "保存しました。" : result.error);
+  }
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-md text-neutral-900">自動返信メール</h3>
+        <label className="flex items-center gap-2 text-sm text-neutral-900">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-neutral-200 text-primary-500 focus:ring-primary-100"
+          />
+          有効にする
+        </label>
+      </div>
+      <p className="mt-1 text-xs text-neutral-600">
+        送信者にメールアドレスの回答があった場合のみ、フォーム送信直後に自動で返信します。<br />
+        件名・本文には次のプレースホルダーが使えます: <br />{"{{name}}"}(氏名) / {"{{company_name}}"}(企業名) /{" "}
+        {"{{form_name}}"}(フォーム名) / {"{{inquiry_body}}"}(問い合わせ内容) /{" "}
+        {"{{job_categories}}"}(依頼職種)<br />未回答の場合は空文字に置き換わります。
+      </p>
+
+      <div className="mt-4 flex flex-col gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">件名</span>
+          <input
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-neutral-600">本文</span>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={8}
+            className="rounded-md border border-neutral-200 bg-neutral-0 px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </label>
+
+        {message && <p className="text-sm text-neutral-600">{message}</p>}
+
+        <button
+          type="button"
+          disabled={isSaving}
+          onClick={handleSave}
+          className="self-start rounded-md bg-primary-500 px-4 py-2 text-sm text-neutral-0 disabled:opacity-40"
+        >
+          保存
+        </button>
+      </div>
+    </div>
   );
 }
 

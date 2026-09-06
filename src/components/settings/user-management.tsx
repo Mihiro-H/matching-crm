@@ -127,6 +127,7 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
               <th className="py-2 font-medium">氏名</th>
               <th className="py-2 font-medium">メールアドレス</th>
               <th className="py-2 font-medium">部署</th>
+              <th className="py-2 font-medium">Slack ID</th>
               <th className="py-2 font-medium">案件振り分け担当者</th>
               <th className="py-2 font-medium">状態</th>
               <th className="py-2 font-medium">操作</th>
@@ -138,7 +139,7 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
             ))}
             {filteredUsers.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-4 text-center text-neutral-600">
+                <td colSpan={7} className="py-4 text-center text-neutral-600">
                   該当するユーザーはいません。
                 </td>
               </tr>
@@ -154,6 +155,10 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
       </div>
       <p className="mt-2 text-xs text-neutral-400">
         案件振り分け担当者は、新規問い合わせ発生時にヘッダーの通知(ベル)を受け取ります。複数人を指定できます。アーカイブ済みのユーザーは指定できません。
+      </p>
+      <p className="mt-1 text-xs text-neutral-400">
+        Slack IDを設定すると、Slack通知の本文で{"{{mentions}}"}
+        プレースホルダーを使った際にこのユーザーへメンションされます(SlackのメンバーID。表示名ではありません。SlackでユーザーのプロフィールからIDをコピーできます)。
       </p>
 
       {showCreateModal && (
@@ -296,6 +301,7 @@ function UserRow({
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user.name);
   const [departmentId, setDepartmentId] = useState(user.departmentId ?? "");
+  const [slackUserId, setSlackUserId] = useState(user.slackUserId ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -304,6 +310,7 @@ function UserRow({
   function handleCancel() {
     setName(user.name);
     setDepartmentId(user.departmentId ?? "");
+    setSlackUserId(user.slackUserId ?? "");
     setError(null);
     setIsEditing(false);
   }
@@ -311,7 +318,11 @@ function UserRow({
   async function handleSave() {
     setError(null);
     setIsSubmitting(true);
-    const result = await updateUserDetails(user.id, { name, departmentId: departmentId || null });
+    const result = await updateUserDetails(user.id, {
+      name,
+      departmentId: departmentId || null,
+      slackUserId: slackUserId || null,
+    });
     setIsSubmitting(false);
     if (!result.success) {
       setError(result.error);
@@ -374,6 +385,19 @@ function UserRow({
           </select>
         ) : (
           departmentName
+        )}
+      </td>
+      <td className="py-2 align-top text-neutral-600">
+        {isEditing ? (
+          <input
+            type="text"
+            value={slackUserId}
+            onChange={(e) => setSlackUserId(e.target.value)}
+            placeholder="U0123ABCDEF"
+            className="w-28 rounded-md border border-neutral-200 bg-neutral-0 px-2 py-1 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        ) : (
+          user.slackUserId ?? "-"
         )}
       </td>
       <td className="py-2 align-top">

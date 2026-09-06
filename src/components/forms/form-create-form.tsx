@@ -28,7 +28,7 @@ export function FormCreateForm() {
       setError(result.error);
       return;
     }
-    router.push(`/forms/${result.id}`);
+    router.push(`/forms/${result.number}`);
   }
 
   return (

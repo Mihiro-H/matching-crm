@@ -191,24 +191,53 @@ export async function createCompany(
   return { id: data.id, label: data.name, sublabel: data.industry };
 }
 
-/** 担当者選択(SCREEN_SPEC.md「商談管理」作成画面: 商談に紐づける担当者を選ぶ) */
+/**
+ * 担当者選択(SCREEN_SPEC.md「商談管理」作成画面: 商談に紐づける担当者を選ぶ。
+ * 統合先候補の検索(person-merge-section.tsx)にも使う)。
+ * メールアドレス重複の統合では「同じメールアドレスの相手を探す」のが主目的のため、
+ * 氏名だけでなくメールアドレスでも検索できるようにする。
+ */
+type PersonSearchRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  company_name_raw: string | null;
+  company: { name: string } | null;
+};
+
+function toPersonSearchResult(row: PersonSearchRow): SearchResultItem {
+  const companyLabel = row.company?.name ?? row.company_name_raw;
+  return { id: row.id, label: row.name, sublabel: [companyLabel, row.email].filter(Boolean).join(" / ") || null };
+}
+
 export async function searchPeople(query: string): Promise<SearchResultItem[]> {
   const supabase = await createSupabaseServerClient();
-  let request = supabase
-    .from("people")
-    .select("id, name, company_name_raw, company:companies(name)")
-    .order("name")
-    .limit(SEARCH_LIMIT);
-  if (query.trim()) {
-    request = request.ilike("name", `%${query.trim()}%`);
+  const select = "id, name, email, company_name_raw, company:companies(name)";
+  const trimmed = query.trim();
+
+  if (!trimmed) {
+    const { data, error } = await supabase.from("people").select(select).order("name").limit(SEARCH_LIMIT);
+    if (error) throw new Error(`担当者の検索に失敗しました: ${error.message}`);
+    return (data ?? []).map(toPersonSearchResult);
   }
-  const { data, error } = await request;
-  if (error) throw new Error(`担当者の検索に失敗しました: ${error.message}`);
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    label: row.name,
-    sublabel: row.company?.name ?? row.company_name_raw,
-  }));
+
+  // .or()に検索語をそのまま埋め込むと、カンマ・括弧等PostgRESTのフィルタ構文上
+  // 意味を持つ文字を含む入力でフィルタ条件そのものを改変されてしまう
+  // (PostgREST filter injection)。氏名・メール別々のilikeクエリに分けて実行し、
+  // 結果をアプリ側でマージすることでこれを避ける(値渡しのため安全)。
+  const [byName, byEmail] = await Promise.all([
+    supabase.from("people").select(select).ilike("name", `%${trimmed}%`).order("name").limit(SEARCH_LIMIT),
+    supabase.from("people").select(select).ilike("email", `%${trimmed}%`).order("name").limit(SEARCH_LIMIT),
+  ]);
+  if (byName.error) throw new Error(`担当者の検索に失敗しました: ${byName.error.message}`);
+  if (byEmail.error) throw new Error(`担当者の検索に失敗しました: ${byEmail.error.message}`);
+
+  const byId = new Map<string, PersonSearchRow>();
+  for (const row of [...(byName.data ?? []), ...(byEmail.data ?? [])]) {
+    byId.set(row.id, row);
+  }
+
+  return [...byId.values()].slice(0, SEARCH_LIMIT).map(toPersonSearchResult);
 }
 
 /**

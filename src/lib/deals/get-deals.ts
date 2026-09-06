@@ -29,6 +29,8 @@ const SORT_COLUMN_MAP: Record<DealsListParams["sortBy"], string> = {
  * 商談管理一覧(SCREEN_SPEC.md「商談管理」)のテーブル表示用データ。
  * 担当者名・企業名の結合は deals_list_view (migration参照) で解決する。
  * 列見出しクリックの絞り込み(企業名/担当者名テキスト検索、主担当モーダル選択)にも対応する。
+ * フォームのカスタム項目の回答は一覧には出さず、商談詳細ページの「フォームの回答内容」
+ * (get-deal.ts getDealFormAnswers)でのみ表示する。
  */
 export async function getDeals(
   params: DealsListParams

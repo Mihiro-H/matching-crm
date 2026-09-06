@@ -15,7 +15,7 @@ export type Json =
 export type UserRole = "sales" | "accounting" | "admin";
 export type PagePermission = "edit" | "view" | "hidden";
 export type DealSource = "form" | "referral" | "other";
-export type JobCategory = "writer" | "photographer" | "marketer" | "designer";
+export type JobCategory = "writer" | "photographer" | "marketer" | "designer" | "other";
 export type DealStatus =
   | "new"
   | "in_progress"
@@ -44,10 +44,11 @@ export type NotificationEventType =
   | "payment_confirmed"
   | "reminder"
   | "meeting_note_ready"
-  | "meeting_note_failed";
+  | "meeting_note_failed"
+  | "duplicate_person_email";
 export type ReportFrequency = "weekly" | "monthly";
 export type ReportRunStatus = "success" | "failed";
-export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom" | "misoca";
+export type IntegrationType = "form" | "cloudsign" | "freee" | "slack" | "zoom" | "misoca" | "email";
 export type IntegrationDirection = "inbound" | "outbound";
 export type IntegrationRelatedEntityType = "deal" | "project" | "estimate" | "invoice" | "meeting_note";
 export type IntegrationLogStatus = "success" | "failed" | "retrying";
@@ -921,17 +922,27 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["integration_logs"]["Insert"]>;
         Relationships: [];
       };
-      // supabase/migrations/20260908110000_form_builder.sql
+      // supabase/migrations/20260908110000_form_builder.sql, updated by
+      // supabase/migrations/20260911090000_form_public_defaults.sql (number列を追加)、
+      // supabase/migrations/20260911140000_form_auto_reply_email.sql (自動返信メール列を追加)
       form_definitions: {
         Row: {
           id: string;
+          // URL用の短い連番(generated always as identityのためInsertには含めない)。
+          number: number;
           name: string;
+          auto_reply_enabled: boolean;
+          auto_reply_subject: string | null;
+          auto_reply_body: string | null;
           created_at: string;
           updated_at: string;
         };
         Insert: {
           id?: string;
           name: string;
+          auto_reply_enabled?: boolean;
+          auto_reply_subject?: string | null;
+          auto_reply_body?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -975,6 +986,23 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      // supabase/migrations/20260911090000_form_public_defaults.sql
+      organization_settings: {
+        Row: {
+          id: boolean;
+          company_name: string | null;
+          logo_url: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          company_name?: string | null;
+          logo_url?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["organization_settings"]["Insert"]>;
+        Relationships: [];
       };
     };
     Views: {

@@ -49,6 +49,15 @@ describe("parseFormSubmission", () => {
     });
   });
 
+  test("normalizes a phone number submitted without hyphens", () => {
+    const fields: FormFieldRow[] = [
+      ...baseFields,
+      { id: "f6", fieldKey: "phone", isBuiltin: true, label: "電話番号", answerType: "text", options: null, isRequired: false, sortOrder: 5 },
+    ];
+    const result = parseFormSubmission(fields, { name: "田中太郎", phone: "09012345678" });
+    expect(result).toMatchObject({ ok: true, data: { personInsert: { phone: "090-1234-5678" } } });
+  });
+
   test("fails when a required field is missing", () => {
     const result = parseFormSubmission(baseFields, { email: "taro@example.com" });
     expect(result).toEqual({ ok: false, error: "「氏名」は必須です。" });
@@ -98,6 +107,49 @@ describe("parseFormSubmission", () => {
         customFields: { custom_abc123: "over_100k" },
       },
     });
+  });
+
+  test("routes the privacy_consent builtin field into customFields (no people/deals column maps to it)", () => {
+    const fields: FormFieldRow[] = [
+      ...baseFields,
+      {
+        id: "f7",
+        fieldKey: "privacy_consent",
+        isBuiltin: true,
+        label: "個人情報の取扱いについての同意",
+        answerType: "single_select",
+        options: [{ value: "agreed", label: "✅個人情報の取扱いについて同意する" }],
+        isRequired: true,
+        sortOrder: 5,
+      },
+    ];
+    const result = parseFormSubmission(fields, { name: "田中太郎", privacy_consent: "agreed" });
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        personInsert: { name: "田中太郎", email: null, phone: null, company_name_raw: null },
+        dealInsert: { job_categories: [], inquiry_body: null },
+        customFields: { privacy_consent: "agreed" },
+      },
+    });
+  });
+
+  test("fails when privacy_consent is required but not checked", () => {
+    const fields: FormFieldRow[] = [
+      ...baseFields,
+      {
+        id: "f7",
+        fieldKey: "privacy_consent",
+        isBuiltin: true,
+        label: "個人情報の取扱いについての同意",
+        answerType: "single_select",
+        options: [{ value: "agreed", label: "✅個人情報の取扱いについて同意する" }],
+        isRequired: true,
+        sortOrder: 5,
+      },
+    ];
+    const result = parseFormSubmission(fields, { name: "田中太郎" });
+    expect(result).toEqual({ ok: false, error: "「個人情報の取扱いについての同意」は必須です。" });
   });
 
   test("rejects a single_select value outside the configured options", () => {

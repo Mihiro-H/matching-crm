@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { DealSource, DealStatus, Json, JobCategory } from "@/lib/supabase/database.types";
+import { resolveFieldValueLabel } from "@/lib/forms/resolve-field-value-label";
 
 export type DealDetail = {
   id: string;
@@ -86,17 +87,6 @@ export async function getDealFormAnswers(dealId: string): Promise<DealFormAnswer
 
   return (fields ?? []).map((field) => {
     const rawValue = customFields[field.field_key] ?? null;
-    return { label: field.label, value: resolveOptionLabels(rawValue, field.options) };
+    return { label: field.label, value: resolveFieldValueLabel(rawValue, field.options) };
   });
-}
-
-function resolveOptionLabels(value: Json, options: unknown): Json {
-  if (!Array.isArray(options) || value === null) return value;
-  const labelByValue = new Map(
-    (options as { value: string; label: string }[]).map((o) => [o.value, o.label])
-  );
-  if (Array.isArray(value)) {
-    return value.map((v) => labelByValue.get(String(v)) ?? String(v));
-  }
-  return labelByValue.get(String(value)) ?? value;
 }

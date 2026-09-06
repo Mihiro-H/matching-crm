@@ -10,6 +10,7 @@ export type UserOption = {
   name: string;
   email: string;
   departmentId: string | null;
+  slackUserId: string | null;
   isLeadDistributor: boolean;
   isArchived: boolean;
 };
@@ -25,7 +26,7 @@ export async function getUsers(): Promise<UserOption[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("users")
-    .select("id, name, email, department_id, is_lead_distributor, is_archived")
+    .select("id, name, email, department_id, slack_user_id, is_lead_distributor, is_archived")
     .order("is_archived")
     .order("name");
   if (error) return [];
@@ -34,6 +35,7 @@ export async function getUsers(): Promise<UserOption[]> {
     name: row.name,
     email: row.email,
     departmentId: row.department_id,
+    slackUserId: row.slack_user_id,
     isLeadDistributor: row.is_lead_distributor,
     isArchived: row.is_archived,
   }));
