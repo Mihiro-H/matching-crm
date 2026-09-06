@@ -2,7 +2,20 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./database.types";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth/callback",
+  // 公開問い合わせフォーム(/contact/[number]、認証不要。public-contact-form.tsx参照)。
+  "/contact",
+  // 外部サービスからのWebhook(CloudSign/AssemblyAI/Slack/フォーム)。Supabaseの
+  // セッションCookieを持たない外部からのPOSTのため、各route内で共有シークレット・
+  // 署名等により個別に検証している(ここで弾くとリダイレクトになり全て失敗する)。
+  "/api/webhooks",
+  // 公開フォームの構成取得API(GET、CORS許可済み・認証不要。schema/route.ts参照)。
+  "/api/forms",
+  // Vercel Cron(CRON_SECRETで各route内検証、セッションCookieは付与されない)。
+  "/api/cron",
+];
 
 /**
  * Supabase SSRの標準パターン: 毎リクエストでセッションCookieを更新しつつ、
