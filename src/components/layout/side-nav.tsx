@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { signOut } from "@/lib/auth/actions";
 import type { CurrentUser } from "@/lib/auth/current-user";
 import type { PagePermission } from "@/lib/supabase/database.types";
 import { Logo } from "./logo";
+
+// AppShell側の開閉ラッパーと同じ幅にそろえるため共有する(Tailwindはクラス名を静的に解析するため文字列ごと持つ)。
+export const SIDE_NAV_WIDTH_CLASS = "w-[220px]";
 
 /**
  * SCREEN_SPEC.md 共通レイアウト:
@@ -25,17 +29,28 @@ function useVisibleNavItems(isAdmin: boolean, pagePermissions: Record<string, Pa
 export function SideNav({
   currentUser,
   pagePermissions,
+  onCollapse,
 }: {
   currentUser: CurrentUser | null;
   pagePermissions: Record<string, PagePermission>;
+  onCollapse: () => void;
 }) {
   const pathname = usePathname();
   const items = useVisibleNavItems(currentUser?.role === "admin", pagePermissions);
 
   return (
-    <nav className="flex h-full w-[220px] shrink-0 flex-col border-r border-neutral-200 bg-neutral-0">
-      <div className="p-4">
+    <nav className={`flex h-full ${SIDE_NAV_WIDTH_CLASS} shrink-0 flex-col border-r border-neutral-200 bg-neutral-0`}>
+      <div className="flex shrink-0 items-center justify-between p-4">
         <Logo />
+        <button
+          type="button"
+          onClick={onCollapse}
+          aria-label="サイドメニューを閉じる"
+          title="サイドメニューを閉じる"
+          className="rounded-md p-1.5 text-neutral-600 hover:bg-page-bg hover:text-primary-600"
+        >
+          <ArrowLeft size={18} />
+        </button>
       </div>
 
       <ul className="flex-1 overflow-y-auto px-2">
@@ -66,7 +81,7 @@ export function SideNav({
       </ul>
 
       {currentUser ? (
-        <div className="flex items-center gap-3 border-t border-neutral-100 p-4">
+        <div className="flex shrink-0 items-center gap-3 border-t border-neutral-100 p-4">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-medium text-primary-600">
             {currentUser.name.slice(0, 1)}
           </span>
@@ -85,7 +100,7 @@ export function SideNav({
       ) : (
         <Link
           href="/login"
-          className="border-t border-neutral-100 p-4 text-center text-sm text-primary-600 hover:bg-page-bg"
+          className="shrink-0 border-t border-neutral-100 p-4 text-center text-sm text-primary-600 hover:bg-page-bg"
         >
           ログインしてください
         </Link>

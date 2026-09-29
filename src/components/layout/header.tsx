@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/navigation";
 import { usePageHeader } from "./page-header-context";
 import { NotificationBell } from "./notification-bell";
@@ -21,10 +22,14 @@ export function Header({
   currentUser,
   initialNotifications,
   initialUnreadNotificationCount,
+  isSideNavOpen,
+  onExpandSideNav,
 }: {
   currentUser: CurrentUser | null;
   initialNotifications: NotificationItem[];
   initialUnreadNotificationCount: number;
+  isSideNavOpen: boolean;
+  onExpandSideNav: () => void;
 }) {
   const pathname = usePathname();
   const breadcrumbs = usePageHeader();
@@ -32,7 +37,19 @@ export function Header({
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-100 bg-neutral-0 px-6">
-      <div className="text-xl text-neutral-900">
+      <div className="flex items-center gap-3 text-xl text-neutral-900">
+        {/* サイドナビを閉じている間の唯一の再表示導線 */}
+        {!isSideNavOpen && (
+          <button
+            type="button"
+            onClick={onExpandSideNav}
+            aria-label="サイドメニューを開く"
+            title="サイドメニューを開く"
+            className="rounded-md p-1.5 text-neutral-600 hover:bg-page-bg hover:text-primary-600"
+          >
+            <ArrowRight size={18} />
+          </button>
+        )}
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <nav className="flex items-center gap-2">
             {breadcrumbs.map((crumb, i) => (
