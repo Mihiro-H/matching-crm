@@ -13,6 +13,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { searchUsers } from "@/lib/search-select/actions";
 import { formatDateJa } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const COLUMN_LABELS: Record<ProjectSortColumn, string> = {
   company: "企業名",
@@ -65,90 +66,92 @@ export function ProjectsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100">
-            {PROJECT_SORTABLE_COLUMNS.map((column) => (
-              <SortFilterHeader
-                key={column}
-                label={COLUMN_LABELS[column]}
-                sortHref={hrefFor({ sort: column })}
-                isSorted={params.sortBy === column}
-                sortDir={params.sortDir}
-                basePath="/projects"
-                currentQuery={currentQuery}
-                filter={
-                  column === "company"
-                    ? {
-                        type: "text",
-                        value: params.companyNameFilter,
-                        placeholder: "企業名で検索",
-                        paramName: "companyName",
-                      }
-                    : column === "title"
+    <ScrollableTable>
+      <TableScrollArea>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-neutral-100">
+              {PROJECT_SORTABLE_COLUMNS.map((column) => (
+                <SortFilterHeader
+                  key={column}
+                  label={COLUMN_LABELS[column]}
+                  sortHref={hrefFor({ sort: column })}
+                  isSorted={params.sortBy === column}
+                  sortDir={params.sortDir}
+                  basePath="/projects"
+                  currentQuery={currentQuery}
+                  filter={
+                    column === "company"
                       ? {
                           type: "text",
-                          value: params.titleFilter,
-                          placeholder: "案件名で検索",
-                          paramName: "title",
+                          value: params.companyNameFilter,
+                          placeholder: "企業名で検索",
+                          paramName: "companyName",
                         }
-                      : column === "assignee"
+                      : column === "title"
                         ? {
-                            type: "person",
-                            value: params.assigneeFilter,
-                            modalTitle: "主担当で絞り込み",
-                            search: searchUsers,
-                            idParamName: "assigneeId",
-                            nameParamName: "assigneeName",
+                            type: "text",
+                            value: params.titleFilter,
+                            placeholder: "案件名で検索",
+                            paramName: "title",
                           }
-                        : undefined
-                }
-              />
+                        : column === "assignee"
+                          ? {
+                              type: "person",
+                              value: params.assigneeFilter,
+                              modalTitle: "主担当で絞り込み",
+                              search: searchUsers,
+                              idParamName: "assigneeId",
+                              nameParamName: "assigneeName",
+                            }
+                          : undefined
+                  }
+                />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {projects.map((project) => (
+              <tr key={project.id} className="border-b border-neutral-100 last:border-0">
+                <td className="px-4 py-3 text-neutral-600">
+                  <Link href={`/companies/${project.companyId}`} className="text-primary-600 hover:underline">
+                    {project.companyName}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <Link href={`/projects/${project.number}`} className="text-primary-600 hover:underline">
+                    {project.title}
+                  </Link>
+                </td>
+                <td className="px-4 py-3">
+                  <StatusBadge meta={PROJECT_STATUS_META[project.status]} />
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{project.assigneeName ?? "未アサイン"}</td>
+                <td className="px-4 py-3 text-neutral-600">
+                  {project.startDate || project.endDate
+                    ? `${project.startDate ? formatDateJa(project.startDate) : "-"} 〜 ${
+                        project.endDate ? formatDateJa(project.endDate) : "-"
+                      }`
+                    : "-"}
+                </td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((project) => (
-            <tr key={project.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3 text-neutral-600">
-                <Link href={`/companies/${project.companyId}`} className="text-primary-600 hover:underline">
-                  {project.companyName}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <Link href={`/projects/${project.number}`} className="text-primary-600 hover:underline">
-                  {project.title}
-                </Link>
-              </td>
-              <td className="px-4 py-3">
-                <StatusBadge meta={PROJECT_STATUS_META[project.status]} />
-              </td>
-              <td className="px-4 py-3 text-neutral-600">{project.assigneeName ?? "未アサイン"}</td>
-              <td className="px-4 py-3 text-neutral-600">
-                {project.startDate || project.endDate
-                  ? `${project.startDate ? formatDateJa(project.startDate) : "-"} 〜 ${
-                      project.endDate ? formatDateJa(project.endDate) : "-"
-                    }`
-                  : "-"}
-              </td>
-            </tr>
-          ))}
-          {projects.length === 0 && (
-            <tr>
-              <td colSpan={PROJECT_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
-                案件が登録されていません。
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={PROJECT_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
+                  案件が登録されていません。
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </TableScrollArea>
       <PaginationControls
         page={params.page}
         totalCount={totalCount}
         pageSize={PAGE_SIZE}
         hrefFor={(page) => hrefFor({ page })}
       />
-    </div>
+    </ScrollableTable>
   );
 }

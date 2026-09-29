@@ -12,6 +12,7 @@ import { SortFilterHeader } from "@/components/ui/sort-filter-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { formatCurrencyJPY, formatDateJa } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const COLUMN_LABELS: Record<EstimateSortColumn, string> = {
   company_name: "企業名",
@@ -54,76 +55,78 @@ export function EstimatesTable({
   if (params.projectTitleFilter) currentQuery.projectTitle = params.projectTitleFilter;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100">
-            {ESTIMATE_SORTABLE_COLUMNS.map((column) => (
-              <SortFilterHeader
-                key={column}
-                label={COLUMN_LABELS[column]}
-                sortHref={hrefFor({ sort: column })}
-                isSorted={params.sortBy === column}
-                sortDir={params.sortDir}
-                basePath="/estimates"
-                currentQuery={currentQuery}
-                filter={
-                  column === "company_name"
-                    ? {
-                        type: "text",
-                        value: params.companyNameFilter,
-                        placeholder: "企業名で検索",
-                        paramName: "companyName",
-                      }
-                    : column === "project_title"
+    <ScrollableTable>
+      <TableScrollArea>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-neutral-100">
+              {ESTIMATE_SORTABLE_COLUMNS.map((column) => (
+                <SortFilterHeader
+                  key={column}
+                  label={COLUMN_LABELS[column]}
+                  sortHref={hrefFor({ sort: column })}
+                  isSorted={params.sortBy === column}
+                  sortDir={params.sortDir}
+                  basePath="/estimates"
+                  currentQuery={currentQuery}
+                  filter={
+                    column === "company_name"
                       ? {
                           type: "text",
-                          value: params.projectTitleFilter,
-                          placeholder: "案件名で検索",
-                          paramName: "projectTitle",
+                          value: params.companyNameFilter,
+                          placeholder: "企業名で検索",
+                          paramName: "companyName",
                         }
-                      : undefined
-                }
-              />
+                      : column === "project_title"
+                        ? {
+                            type: "text",
+                            value: params.projectTitleFilter,
+                            placeholder: "案件名で検索",
+                            paramName: "projectTitle",
+                          }
+                        : undefined
+                  }
+                />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {estimates.map((estimate) => (
+              <tr key={estimate.id} className="border-b border-neutral-100 last:border-0">
+                <td className="px-4 py-3 text-neutral-600">
+                  <Link href={`/companies/${estimate.companyId}`} className="text-primary-600 hover:underline">
+                    {estimate.companyName}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-neutral-900">
+                  <Link href={`/projects/${estimate.projectNumber}`} className="text-primary-600 hover:underline">
+                    {estimate.projectTitle}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{DOCUMENT_TYPE_LABELS[estimate.documentType]}</td>
+                <td className="px-4 py-3 text-neutral-600">{formatCurrencyJPY(estimate.amount)}</td>
+                <td className="px-4 py-3">
+                  <StatusBadge meta={CONTRACT_STATUS_META[estimate.contractStatus]} />
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{formatDateJa(estimate.createdAt)}</td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {estimates.map((estimate) => (
-            <tr key={estimate.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3 text-neutral-600">
-                <Link href={`/companies/${estimate.companyId}`} className="text-primary-600 hover:underline">
-                  {estimate.companyName}
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-neutral-900">
-                <Link href={`/projects/${estimate.projectNumber}`} className="text-primary-600 hover:underline">
-                  {estimate.projectTitle}
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-neutral-600">{DOCUMENT_TYPE_LABELS[estimate.documentType]}</td>
-              <td className="px-4 py-3 text-neutral-600">{formatCurrencyJPY(estimate.amount)}</td>
-              <td className="px-4 py-3">
-                <StatusBadge meta={CONTRACT_STATUS_META[estimate.contractStatus]} />
-              </td>
-              <td className="px-4 py-3 text-neutral-600">{formatDateJa(estimate.createdAt)}</td>
-            </tr>
-          ))}
-          {estimates.length === 0 && (
-            <tr>
-              <td colSpan={ESTIMATE_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
-                見積・発注はまだありません。
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            {estimates.length === 0 && (
+              <tr>
+                <td colSpan={ESTIMATE_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
+                  見積・発注はまだありません。
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </TableScrollArea>
       <PaginationControls
         page={params.page}
         totalCount={totalCount}
         pageSize={PAGE_SIZE}
         hrefFor={(page) => hrefFor({ page })}
       />
-    </div>
+    </ScrollableTable>
   );
 }

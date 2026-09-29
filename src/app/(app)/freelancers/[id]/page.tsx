@@ -8,6 +8,7 @@ import { formatDateJa } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requireAdminPageAccess } from "@/lib/auth/page-access";
 import { SupabaseNotConfiguredNotice } from "@/components/ui/supabase-not-configured-notice";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 // SCREEN_SPEC.md 9章「アクセス制限」: role='admin'以外はURLを直接叩いてもアクセス不可。
 export default async function FreelancerDetailPage({
@@ -72,41 +73,43 @@ export default async function FreelancerDetailPage({
         )}
 
         {!error && assignments.length > 0 && (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-neutral-100 text-neutral-600">
-                  <th className="px-4 py-3 font-medium">企業名</th>
-                  <th className="px-4 py-3 font-medium">案件名</th>
-                  <th className="px-4 py-3 font-medium">ステータス</th>
-                  <th className="px-4 py-3 font-medium">職種</th>
-                  <th className="px-4 py-3 font-medium">アサイン日</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map((assignment) => (
-                  <tr key={assignment.id} className="border-b border-neutral-100 last:border-0">
-                    <td className="px-4 py-3 text-neutral-600">{assignment.companyName}</td>
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/projects/${assignment.projectNumber}`}
-                        className="text-primary-600 hover:underline"
-                      >
-                        {assignment.projectTitle}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge meta={PROJECT_STATUS_META[assignment.projectStatus]} />
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">
-                      {JOB_CATEGORY_LABELS[assignment.jobCategory]}
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">{formatDateJa(assignment.assignedAt)}</td>
+          <ScrollableTable variant="plain" className="mt-3">
+            <TableScrollArea>
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-neutral-100 text-neutral-600">
+                    <th className="px-4 py-3 font-medium">企業名</th>
+                    <th className="px-4 py-3 font-medium">案件名</th>
+                    <th className="px-4 py-3 font-medium">ステータス</th>
+                    <th className="px-4 py-3 font-medium">職種</th>
+                    <th className="px-4 py-3 font-medium">アサイン日</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {assignments.map((assignment) => (
+                    <tr key={assignment.id} className="border-b border-neutral-100 last:border-0">
+                      <td className="px-4 py-3 text-neutral-600">{assignment.companyName}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/projects/${assignment.projectNumber}`}
+                          className="text-primary-600 hover:underline"
+                        >
+                          {assignment.projectTitle}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <StatusBadge meta={PROJECT_STATUS_META[assignment.projectStatus]} />
+                      </td>
+                      <td className="px-4 py-3 text-neutral-600">
+                        {JOB_CATEGORY_LABELS[assignment.jobCategory]}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-600">{formatDateJa(assignment.assignedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScrollArea>
+          </ScrollableTable>
         )}
       </div>
     </div>

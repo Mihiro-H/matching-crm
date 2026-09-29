@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ListFilter, X } from "lucide-react";
 import { SearchSelectModal, type SearchResultItem } from "@/components/ui/search-select-modal";
+import { computePopoverPosition } from "@/lib/popover-position";
+
+// テキスト絞り込みポップオーバーのおおよその幅(px)。画面右端からはみ出さないよう位置を補正するのに使う。
+const TEXT_FILTER_POPOVER_WIDTH = 240;
 
 export type TextFilterConfig = {
   type: "text";
@@ -53,21 +58,49 @@ export function SortFilterHeader({
   filter?: TextFilterConfig | PersonFilterConfig;
 }) {
   const router = useRouter();
-  const [showPopover, setShowPopover] = useState(false);
+  // nullのときはポップオーバーを閉じている
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [textValue, setTextValue] = useState(filter?.type === "text" ? (filter.value ?? "") : "");
   const popoverRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const isPopoverOpen = popoverPosition !== null;
 
   useEffect(() => {
-    if (!showPopover) return;
+    if (!isPopoverOpen) return;
     function handleClickOutside(event: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setShowPopover(false);
-      }
+      const target = event.target as Node;
+      // 起点ボタン自身のクリックはonClick側のトグルに任せる(ここで閉じると直後に開き直してしまう)
+      if (popoverRef.current?.contains(target) || filterButtonRef.current?.contains(target)) return;
+      setPopoverPosition(null);
+    }
+    // ポップオーバーは画面座標で固定配置しているため、テーブルや画面がスクロール・リサイズされたら
+    // 起点ボタンとずれないよう閉じる
+    function handleViewportChange(event: Event) {
+      if (popoverRef.current?.contains(event.target as Node)) return;
+      setPopoverPosition(null);
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showPopover]);
+    window.addEventListener("scroll", handleViewportChange, true);
+    window.addEventListener("resize", handleViewportChange);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleViewportChange, true);
+      window.removeEventListener("resize", handleViewportChange);
+    };
+  }, [isPopoverOpen]);
+
+  function togglePopover() {
+    if (isPopoverOpen) {
+      setPopoverPosition(null);
+      return;
+    }
+    const button = filterButtonRef.current;
+    if (!button) return;
+    setPopoverPosition(
+      computePopoverPosition(button.getBoundingClientRect(), { width: TEXT_FILTER_POPOVER_WIDTH }, window.innerWidth)
+    );
+  }
 
   const isFilterActive = filter ? filter.value !== null : false;
 
@@ -83,7 +116,7 @@ export function SortFilterHeader({
   function handleTextApply(e: React.FormEvent) {
     e.preventDefault();
     if (filter?.type !== "text") return;
-    setShowPopover(false);
+    setPopoverPosition(null);
     const value = textValue.trim() || null;
     router.push(buildHref({ [filter.paramName]: value }));
   }
@@ -98,7 +131,7 @@ export function SortFilterHeader({
   }
 
   return (
-    <th className="relative px-4 py-3 font-medium text-neutral-600">
+    <th className="px-4 py-3 font-medium text-neutral-600">
       <div className="flex items-center gap-1">
         <Link href={sortHref} className="hover:text-primary-600">
           {label}
@@ -106,8 +139,9 @@ export function SortFilterHeader({
         </Link>
         {filter && (
           <button
+            ref={filterButtonRef}
             type="button"
-            onClick={() => (filter.type === "text" ? setShowPopover((v) => !v) : setShowModal(true))}
+            onClick={() => (filter.type === "text" ? togglePopover() : setShowModal(true))}
             aria-label={`${label}で絞り込み`}
             className={isFilterActive ? "text-primary-600" : "text-neutral-400 hover:text-neutral-600"}
           >
@@ -126,29 +160,40 @@ export function SortFilterHeader({
         )}
       </div>
 
-      {filter?.type === "text" && showPopover && (
-        <div ref={popoverRef} className="absolute left-0 top-full z-20 mt-1">
-          <form
-            onSubmit={handleTextApply}
-            className="flex gap-1 rounded-md border border-neutral-200 bg-neutral-0 p-2 shadow-md"
+      {/*
+        テーブルはTableScrollArea内でスクロールするため、th内に置くと枠で切れて見えなくなる。
+        document.bodyへポータルし、起点ボタンの画面座標にfixedで配置する。
+      */}
+      {filter?.type === "text" &&
+        popoverPosition &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="fixed z-50"
+            style={{ top: popoverPosition.top, left: popoverPosition.left }}
           >
-            <input
-              autoFocus
-              type="text"
-              value={textValue}
-              onChange={(e) => setTextValue(e.target.value)}
-              placeholder={filter.placeholder}
-              className="w-40 rounded-md border border-neutral-200 bg-neutral-0 px-2 py-1 text-xs font-normal text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
-            />
-            <button
-              type="submit"
-              className="whitespace-nowrap rounded-md bg-primary-500 px-2 py-1 text-xs font-normal text-neutral-0"
+            <form
+              onSubmit={handleTextApply}
+              className="flex gap-1 rounded-md border border-neutral-200 bg-neutral-0 p-2 shadow-md"
             >
-              適用
-            </button>
-          </form>
-        </div>
-      )}
+              <input
+                autoFocus
+                type="text"
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                placeholder={filter.placeholder}
+                className="w-40 rounded-md border border-neutral-200 bg-neutral-0 px-2 py-1 text-xs font-normal text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              />
+              <button
+                type="submit"
+                className="whitespace-nowrap rounded-md bg-primary-500 px-2 py-1 text-xs font-normal text-neutral-0"
+              >
+                適用
+              </button>
+            </form>
+          </div>,
+          document.body
+        )}
 
       {filter?.type === "person" && (
         <SearchSelectModal

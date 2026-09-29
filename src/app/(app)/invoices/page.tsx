@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PAGE_SIZE, parsePageParam } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 export default async function InvoicesPage({
   searchParams,
@@ -51,51 +52,53 @@ export default async function InvoicesPage({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="px-4 py-3 font-medium">企業名</th>
-              <th className="px-4 py-3 font-medium">案件名</th>
-              <th className="px-4 py-3 font-medium">金額</th>
-              <th className="px-4 py-3 font-medium">請求日</th>
-              <th className="px-4 py-3 font-medium">入金状況</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((invoice) => (
-              <tr key={invoice.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3 text-neutral-600">{invoice.companyName}</td>
-                <td className="px-4 py-3">
-                  <Link href={`/invoices/${invoice.id}`} className="text-primary-600 hover:underline">
-                    {invoice.projectTitle}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">{formatCurrencyJPY(invoice.amount)}</td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {invoice.issuedDate ? formatDateJa(invoice.issuedDate) : "-"}
-                </td>
-                <td className="px-4 py-3">
-                  <StatusBadge meta={PAYMENT_STATUS_META[invoice.paymentStatus]} />
-                </td>
+      <ScrollableTable>
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-neutral-600">
+                <th className="px-4 py-3 font-medium">企業名</th>
+                <th className="px-4 py-3 font-medium">案件名</th>
+                <th className="px-4 py-3 font-medium">金額</th>
+                <th className="px-4 py-3 font-medium">請求日</th>
+                <th className="px-4 py-3 font-medium">入金状況</th>
               </tr>
-            ))}
-            {invoices.length === 0 && !error && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-600">
-                  請求はまだありません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoices.map((invoice) => (
+                <tr key={invoice.id} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3 text-neutral-600">{invoice.companyName}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/invoices/${invoice.id}`} className="text-primary-600 hover:underline">
+                      {invoice.projectTitle}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{formatCurrencyJPY(invoice.amount)}</td>
+                  <td className="px-4 py-3 text-neutral-600">
+                    {invoice.issuedDate ? formatDateJa(invoice.issuedDate) : "-"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <StatusBadge meta={PAYMENT_STATUS_META[invoice.paymentStatus]} />
+                  </td>
+                </tr>
+              ))}
+              {invoices.length === 0 && !error && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-neutral-600">
+                    請求はまだありません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
         <PaginationControls
           page={page}
           totalCount={totalCount}
           pageSize={PAGE_SIZE}
           hrefFor={(p) => (p > 1 ? `/invoices?page=${p}` : "/invoices")}
         />
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type { Department, UserOption } from "@/lib/settings/get-permissions";
 import type { PagePermission } from "@/lib/supabase/database.types";
 import { PaginationControlsClient } from "@/components/ui/pagination-controls-client";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const PERMISSION_OPTIONS: { value: PagePermission; label: string }[] = [
   { value: "edit", label: "編集" },
@@ -169,67 +170,69 @@ export function IndividualPermissionsTab({
         {message && <p className="text-sm text-neutral-600">{message}</p>}
       </div>
 
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="w-10 py-2 font-medium">
-                <input
-                  type="checkbox"
-                  checked={allFilteredSelected}
-                  onChange={toggleAllFiltered}
-                  aria-label="表示中の全ユーザーを選択"
-                  className="h-4 w-4 rounded border-neutral-200 text-primary-500 focus:ring-primary-100"
-                />
-              </th>
-              <th className="py-2 font-medium">氏名</th>
-              <th className="py-2 font-medium">メールアドレス</th>
-              <th className="py-2 font-medium">部署</th>
-              <th className="py-2 font-medium">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedUsers.map((u) => (
-              <tr key={u.id} className="border-b border-neutral-100 last:border-0">
-                <td className="py-2">
+      <ScrollableTable variant="plain" className="mt-4">
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-neutral-600">
+                <th className="w-10 py-2 font-medium">
                   <input
                     type="checkbox"
-                    checked={selectedIds.has(u.id)}
-                    onChange={() => toggleUser(u.id)}
-                    aria-label={`${u.name}を選択`}
+                    checked={allFilteredSelected}
+                    onChange={toggleAllFiltered}
+                    aria-label="表示中の全ユーザーを選択"
                     className="h-4 w-4 rounded border-neutral-200 text-primary-500 focus:ring-primary-100"
                   />
-                </td>
-                <td className="py-2 text-neutral-900">{u.name}</td>
-                <td className="py-2 text-neutral-600">{u.email}</td>
-                <td className="py-2 text-neutral-600">{departmentNameById.get(u.departmentId ?? "") ?? "-"}</td>
-                <td className="py-2">
-                  <button
-                    type="button"
-                    onClick={() => setDetailUser(u)}
-                    className="text-xs text-primary-600 hover:underline"
-                  >
-                    詳細設定
-                  </button>
-                </td>
+                </th>
+                <th className="py-2 font-medium">氏名</th>
+                <th className="py-2 font-medium">メールアドレス</th>
+                <th className="py-2 font-medium">部署</th>
+                <th className="py-2 font-medium">操作</th>
               </tr>
-            ))}
-            {filteredUsers.length === 0 && (
-              <tr>
-                <td colSpan={5} className="py-4 text-center text-neutral-600">
-                  該当するユーザーはいません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pagedUsers.map((u) => (
+                <tr key={u.id} className="border-b border-neutral-100 last:border-0">
+                  <td className="py-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(u.id)}
+                      onChange={() => toggleUser(u.id)}
+                      aria-label={`${u.name}を選択`}
+                      className="h-4 w-4 rounded border-neutral-200 text-primary-500 focus:ring-primary-100"
+                    />
+                  </td>
+                  <td className="py-2 text-neutral-900">{u.name}</td>
+                  <td className="py-2 text-neutral-600">{u.email}</td>
+                  <td className="py-2 text-neutral-600">{departmentNameById.get(u.departmentId ?? "") ?? "-"}</td>
+                  <td className="py-2">
+                    <button
+                      type="button"
+                      onClick={() => setDetailUser(u)}
+                      className="text-xs text-primary-600 hover:underline"
+                    >
+                      詳細設定
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-neutral-600">
+                    該当するユーザーはいません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
         <PaginationControlsClient
           page={page}
           totalCount={filteredUsers.length}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />
-      </div>
+      </ScrollableTable>
 
       {detailUser && (
         <UserPermissionDetailModal user={detailUser} onClose={() => setDetailUser(null)} />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCompanyPeople } from "@/lib/companies/get-company-people";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 export default async function CompanyPeopleTab({
   params,
@@ -18,29 +19,31 @@ export default async function CompanyPeopleTab({
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100 text-neutral-600">
-            <th className="px-4 py-3 font-medium">担当者名</th>
-            <th className="px-4 py-3 font-medium">メール</th>
-            <th className="px-4 py-3 font-medium">電話番号</th>
-          </tr>
-        </thead>
-        <tbody>
-          {people.map((person) => (
-            <tr key={person.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3">
-                <Link href={`/people/${person.id}`} className="text-primary-600 hover:underline">
-                  {person.name}
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-neutral-600">{person.email ?? "-"}</td>
-              <td className="px-4 py-3 text-neutral-600">{person.phone ?? "-"}</td>
+    <ScrollableTable>
+      <TableScrollArea>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-neutral-100 text-neutral-600">
+              <th className="px-4 py-3 font-medium">担当者名</th>
+              <th className="px-4 py-3 font-medium">メール</th>
+              <th className="px-4 py-3 font-medium">電話番号</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {people.map((person) => (
+              <tr key={person.id} className="border-b border-neutral-100 last:border-0">
+                <td className="px-4 py-3">
+                  <Link href={`/people/${person.id}`} className="text-primary-600 hover:underline">
+                    {person.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{person.email ?? "-"}</td>
+                <td className="px-4 py-3 text-neutral-600">{person.phone ?? "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScrollArea>
+    </ScrollableTable>
   );
 }

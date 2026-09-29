@@ -74,3 +74,16 @@ body {
   background: var(--color-page-bg);
   color: var(--color-neutral-900);
 }
+
+/*
+ * TableScrollArea(components/ui/scrollable-table.tsx)内のテーブル見出しを、
+ * 縦スクロール中も上に固定する。背景色が無いと下の行が透けて見え、
+ * border-collapseのままではthの下線がスクロールで流れてしまうため、下線はinsetの影で引く。
+ */
+.scrollable-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--color-neutral-0);
+  box-shadow: inset 0 -1px 0 var(--color-neutral-100);
+}

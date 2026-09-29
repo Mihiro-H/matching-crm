@@ -4,6 +4,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PAGE_SIZE, parsePageParam } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 /**
  * 担当者一覧(SCREEN_SPEC.md「担当者一覧」)。
@@ -48,45 +49,47 @@ export default async function PeoplePage({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="px-4 py-3 font-medium">担当者名</th>
-              <th className="px-4 py-3 font-medium">メール</th>
-              <th className="px-4 py-3 font-medium">電話番号</th>
-              <th className="px-4 py-3 font-medium">企業名</th>
-            </tr>
-          </thead>
-          <tbody>
-            {people.map((person) => (
-              <tr key={person.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/people/${person.id}`} className="text-primary-600 hover:underline">
-                    {person.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">{person.email ?? "-"}</td>
-                <td className="px-4 py-3 text-neutral-600">{person.phone ?? "-"}</td>
-                <td className="px-4 py-3 text-neutral-600">{person.companyName ?? "-"}</td>
+      <ScrollableTable>
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-neutral-600">
+                <th className="px-4 py-3 font-medium">担当者名</th>
+                <th className="px-4 py-3 font-medium">メール</th>
+                <th className="px-4 py-3 font-medium">電話番号</th>
+                <th className="px-4 py-3 font-medium">企業名</th>
               </tr>
-            ))}
-            {people.length === 0 && !error && (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-neutral-600">
-                  担当者が登録されていません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {people.map((person) => (
+                <tr key={person.id} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/people/${person.id}`} className="text-primary-600 hover:underline">
+                      {person.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{person.email ?? "-"}</td>
+                  <td className="px-4 py-3 text-neutral-600">{person.phone ?? "-"}</td>
+                  <td className="px-4 py-3 text-neutral-600">{person.companyName ?? "-"}</td>
+                </tr>
+              ))}
+              {people.length === 0 && !error && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-600">
+                    担当者が登録されていません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
         <PaginationControls
           page={page}
           totalCount={totalCount}
           pageSize={PAGE_SIZE}
           hrefFor={(p) => (p > 1 ? `/people?page=${p}` : "/people")}
         />
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

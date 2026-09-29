@@ -11,6 +11,7 @@ import { SortFilterHeader } from "@/components/ui/sort-filter-header";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 import { formatDateTimeJa } from "@/lib/format";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const COLUMN_LABELS: Record<FreelancerSortColumn, string> = {
   platform_freelancer_id: "ID",
@@ -52,82 +53,84 @@ export function FreelancersTable({
   if (params.emailFilter) currentQuery.email = params.emailFilter;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-neutral-100">
-            {FREELANCER_SORTABLE_COLUMNS.map((column) => (
-              <SortFilterHeader
-                key={column}
-                label={COLUMN_LABELS[column]}
-                sortHref={hrefFor({ sort: column })}
-                isSorted={params.sortBy === column}
-                sortDir={params.sortDir}
-                basePath="/freelancers"
-                currentQuery={currentQuery}
-                filter={
-                  column === "platform_freelancer_id"
-                    ? {
-                        type: "text",
-                        value: params.platformFreelancerIdFilter,
-                        placeholder: "IDで検索",
-                        paramName: "platformFreelancerId",
-                      }
-                    : column === "name"
-                      ? { type: "text", value: params.nameFilter, placeholder: "氏名で検索", paramName: "name" }
-                      : column === "email"
-                        ? { type: "text", value: params.emailFilter, placeholder: "メールで検索", paramName: "email" }
-                        : undefined
-                }
-              />
+    <ScrollableTable>
+      <TableScrollArea>
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-neutral-100">
+              {FREELANCER_SORTABLE_COLUMNS.map((column) => (
+                <SortFilterHeader
+                  key={column}
+                  label={COLUMN_LABELS[column]}
+                  sortHref={hrefFor({ sort: column })}
+                  isSorted={params.sortBy === column}
+                  sortDir={params.sortDir}
+                  basePath="/freelancers"
+                  currentQuery={currentQuery}
+                  filter={
+                    column === "platform_freelancer_id"
+                      ? {
+                          type: "text",
+                          value: params.platformFreelancerIdFilter,
+                          placeholder: "IDで検索",
+                          paramName: "platformFreelancerId",
+                        }
+                      : column === "name"
+                        ? { type: "text", value: params.nameFilter, placeholder: "氏名で検索", paramName: "name" }
+                        : column === "email"
+                          ? { type: "text", value: params.emailFilter, placeholder: "メールで検索", paramName: "email" }
+                          : undefined
+                  }
+                />
+              ))}
+              <th className="px-4 py-3 font-medium text-neutral-600">対応職種</th>
+            </tr>
+          </thead>
+          <tbody>
+            {freelancers.map((freelancer) => (
+              <tr key={freelancer.id} className="border-b border-neutral-100 last:border-0">
+                <td className="px-4 py-3 text-neutral-600">{freelancer.platformFreelancerId}</td>
+                <td className="px-4 py-3">
+                  <Link href={`/freelancers/${freelancer.id}`} className="text-primary-600 hover:underline">
+                    {freelancer.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-neutral-600">{freelancer.email ?? "-"}</td>
+                <td className="px-4 py-3 text-neutral-600">{freelancer.activeProjectCount}</td>
+                <td className="px-4 py-3 text-neutral-600">
+                  {freelancer.lastImportedAt ? formatDateTimeJa(freelancer.lastImportedAt) : "-"}
+                </td>
+                <td className="px-4 py-3">
+                  {freelancer.jobCategories && freelancer.jobCategories.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {freelancer.jobCategories.map((c) => (
+                        <span key={c} className={`rounded-sm px-2 py-0.5 text-xs ${JOB_CATEGORY_TAG_STYLES[c]}`}>
+                          {JOB_CATEGORY_LABELS[c]}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-neutral-600">-</span>
+                  )}
+                </td>
+              </tr>
             ))}
-            <th className="px-4 py-3 font-medium text-neutral-600">対応職種</th>
-          </tr>
-        </thead>
-        <tbody>
-          {freelancers.map((freelancer) => (
-            <tr key={freelancer.id} className="border-b border-neutral-100 last:border-0">
-              <td className="px-4 py-3 text-neutral-600">{freelancer.platformFreelancerId}</td>
-              <td className="px-4 py-3">
-                <Link href={`/freelancers/${freelancer.id}`} className="text-primary-600 hover:underline">
-                  {freelancer.name}
-                </Link>
-              </td>
-              <td className="px-4 py-3 text-neutral-600">{freelancer.email ?? "-"}</td>
-              <td className="px-4 py-3 text-neutral-600">{freelancer.activeProjectCount}</td>
-              <td className="px-4 py-3 text-neutral-600">
-                {freelancer.lastImportedAt ? formatDateTimeJa(freelancer.lastImportedAt) : "-"}
-              </td>
-              <td className="px-4 py-3">
-                {freelancer.jobCategories && freelancer.jobCategories.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {freelancer.jobCategories.map((c) => (
-                      <span key={c} className={`rounded-sm px-2 py-0.5 text-xs ${JOB_CATEGORY_TAG_STYLES[c]}`}>
-                        {JOB_CATEGORY_LABELS[c]}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-neutral-600">-</span>
-                )}
-              </td>
-            </tr>
-          ))}
-          {freelancers.length === 0 && (
-            <tr>
-              <td colSpan={FREELANCER_SORTABLE_COLUMNS.length + 1} className="px-4 py-8 text-center text-neutral-600">
-                フリーランスが登録されていません。CSVで一括更新してください。
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            {freelancers.length === 0 && (
+              <tr>
+                <td colSpan={FREELANCER_SORTABLE_COLUMNS.length + 1} className="px-4 py-8 text-center text-neutral-600">
+                  フリーランスが登録されていません。CSVで一括更新してください。
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </TableScrollArea>
       <PaginationControls
         page={params.page}
         totalCount={totalCount}
         pageSize={PAGE_SIZE}
         hrefFor={(page) => hrefFor({ page })}
       />
-    </div>
+    </ScrollableTable>
   );
 }

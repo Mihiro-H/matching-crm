@@ -11,6 +11,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 import { PAGE_SIZE } from "@/lib/pagination";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
 import { requirePageAccess } from "@/lib/auth/page-access";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const COLUMN_LABELS: Record<CompanySortColumn, string> = {
   name: "企業名",
@@ -74,56 +75,58 @@ export default async function CompaniesPage({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100">
-              {COMPANY_SORTABLE_COLUMNS.map((column) => (
-                <SortFilterHeader
-                  key={column}
-                  label={COLUMN_LABELS[column]}
-                  sortHref={hrefFor({ sort: column })}
-                  isSorted={params.sortBy === column}
-                  sortDir={params.sortDir}
-                  basePath="/companies"
-                  currentQuery={currentQuery}
-                  filter={
-                    column === "name"
-                      ? { type: "text", value: params.nameFilter, placeholder: "企業名で検索", paramName: "name" }
-                      : undefined
-                  }
-                />
+      <ScrollableTable>
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100">
+                {COMPANY_SORTABLE_COLUMNS.map((column) => (
+                  <SortFilterHeader
+                    key={column}
+                    label={COLUMN_LABELS[column]}
+                    sortHref={hrefFor({ sort: column })}
+                    isSorted={params.sortBy === column}
+                    sortDir={params.sortDir}
+                    basePath="/companies"
+                    currentQuery={currentQuery}
+                    filter={
+                      column === "name"
+                        ? { type: "text", value: params.nameFilter, placeholder: "企業名で検索", paramName: "name" }
+                        : undefined
+                    }
+                  />
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {companies.map((company) => (
+                <tr key={company.id} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/companies/${company.id}`} className="text-primary-600 hover:underline">
+                      {company.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{company.industry ?? "-"}</td>
+                  <td className="px-4 py-3 text-neutral-600">{company.latestProjectTitle ?? "-"}</td>
+                </tr>
               ))}
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((company) => (
-              <tr key={company.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/companies/${company.id}`} className="text-primary-600 hover:underline">
-                    {company.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">{company.industry ?? "-"}</td>
-                <td className="px-4 py-3 text-neutral-600">{company.latestProjectTitle ?? "-"}</td>
-              </tr>
-            ))}
-            {companies.length === 0 && !error && (
-              <tr>
-                <td colSpan={COMPANY_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
-                  企業が登録されていません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              {companies.length === 0 && !error && (
+                <tr>
+                  <td colSpan={COMPANY_SORTABLE_COLUMNS.length} className="px-4 py-8 text-center text-neutral-600">
+                    企業が登録されていません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
         <PaginationControls
           page={params.page}
           totalCount={totalCount}
           pageSize={PAGE_SIZE}
           hrefFor={(page) => hrefFor({ page })}
         />
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

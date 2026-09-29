@@ -13,6 +13,7 @@ import type { Department, UserOption } from "@/lib/settings/get-permissions";
 import type { UserRole } from "@/lib/supabase/database.types";
 import { PaginationControlsClient } from "@/components/ui/pagination-controls-client";
 import { PAGE_SIZE } from "@/lib/pagination";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 const ROLE_LABELS: Record<UserRole, string> = { sales: "営業", accounting: "経理", admin: "管理者" };
 const STATUS_OPTIONS = [
@@ -120,39 +121,41 @@ export function UserManagement({ users, departments }: { users: UserOption[]; de
         </label>
       </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="py-2 font-medium">氏名</th>
-              <th className="py-2 font-medium">メールアドレス</th>
-              <th className="py-2 font-medium">部署</th>
-              <th className="py-2 font-medium">Slack ID</th>
-              <th className="py-2 font-medium">案件振り分け担当者</th>
-              <th className="py-2 font-medium">状態</th>
-              <th className="py-2 font-medium">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedUsers.map((u) => (
-              <UserRow key={u.id} user={u} departments={departments} onChanged={() => router.refresh()} />
-            ))}
-            {filteredUsers.length === 0 && (
-              <tr>
-                <td colSpan={7} className="py-4 text-center text-neutral-600">
-                  該当するユーザーはいません。
-                </td>
+      <ScrollableTable variant="plain" className="mt-3">
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-neutral-600">
+                <th className="py-2 font-medium">氏名</th>
+                <th className="py-2 font-medium">メールアドレス</th>
+                <th className="py-2 font-medium">部署</th>
+                <th className="py-2 font-medium">Slack ID</th>
+                <th className="py-2 font-medium">案件振り分け担当者</th>
+                <th className="py-2 font-medium">状態</th>
+                <th className="py-2 font-medium">操作</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {pagedUsers.map((u) => (
+                <UserRow key={u.id} user={u} departments={departments} onChanged={() => router.refresh()} />
+              ))}
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-4 text-center text-neutral-600">
+                    該当するユーザーはいません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
         <PaginationControlsClient
           page={page}
           totalCount={filteredUsers.length}
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />
-      </div>
+      </ScrollableTable>
       <p className="mt-2 text-xs text-neutral-400">
         案件振り分け担当者は、新規問い合わせ発生時にヘッダーの通知(ベル)を受け取ります。複数人を指定できます。アーカイブ済みのユーザーは指定できません。
       </p>

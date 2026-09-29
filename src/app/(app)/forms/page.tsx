@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getForms } from "@/lib/forms/get-forms";
 import { formatDateTimeJa } from "@/lib/format";
 import { isSupabaseConfigured } from "@/lib/supabase/server";
+import { ScrollableTable, TableScrollArea } from "@/components/ui/scrollable-table";
 
 export default async function FormsPage() {
   if (!isSupabaseConfigured()) {
@@ -31,37 +32,39 @@ export default async function FormsPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-neutral-0">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-neutral-100 text-neutral-600">
-              <th className="px-4 py-3 font-medium">フォーム名</th>
-              <th className="px-4 py-3 font-medium">項目数</th>
-              <th className="px-4 py-3 font-medium">更新日時</th>
-            </tr>
-          </thead>
-          <tbody>
-            {forms.map((form) => (
-              <tr key={form.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-4 py-3">
-                  <Link href={`/forms/${form.number}`} className="text-primary-600 hover:underline">
-                    {form.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">{form.fieldCount}項目</td>
-                <td className="px-4 py-3 text-neutral-600">{formatDateTimeJa(form.updatedAt)}</td>
+      <ScrollableTable>
+        <TableScrollArea>
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-neutral-600">
+                <th className="px-4 py-3 font-medium">フォーム名</th>
+                <th className="px-4 py-3 font-medium">項目数</th>
+                <th className="px-4 py-3 font-medium">更新日時</th>
               </tr>
-            ))}
-            {forms.length === 0 && !error && (
-              <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-neutral-600">
-                  フォームはまだありません。
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {forms.map((form) => (
+                <tr key={form.id} className="border-b border-neutral-100 last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/forms/${form.number}`} className="text-primary-600 hover:underline">
+                      {form.name}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{form.fieldCount}項目</td>
+                  <td className="px-4 py-3 text-neutral-600">{formatDateTimeJa(form.updatedAt)}</td>
+                </tr>
+              ))}
+              {forms.length === 0 && !error && (
+                <tr>
+                  <td colSpan={3} className="px-4 py-8 text-center text-neutral-600">
+                    フォームはまだありません。
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </TableScrollArea>
+      </ScrollableTable>
     </div>
   );
 }
